@@ -4,23 +4,29 @@ import StaffShell from "@/components/StaffShell";
 import { usePosStore } from "@/stores/posStore";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
+import { lazy, Suspense } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Inventory from "./pages/Inventory";
-import Members from "./pages/Members";
-import MemberPortal from "./pages/MemberPortal";
-import Operations from "./pages/Operations";
-import Overview from "./pages/Overview";
-import Register from "./pages/Register";
-import Reports from "./pages/Reports";
 import StaffLogin from "./pages/StaffLogin";
-import Transfers from "./pages/Transfers";
-import Users from "./pages/Users";
+
+const Inventory = lazy(() => import("./pages/Inventory"));
+const Members = lazy(() => import("./pages/Members"));
+const MemberPortal = lazy(() => import("./pages/MemberPortal"));
+const Operations = lazy(() => import("./pages/Operations"));
+const Overview = lazy(() => import("./pages/Overview"));
+const Register = lazy(() => import("./pages/Register"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Transfers = lazy(() => import("./pages/Transfers"));
+const Users = lazy(() => import("./pages/Users"));
 
 function Protected({ children }: { children: React.ReactNode }) {
   const accessToken = usePosStore(state => state.accessToken);
   if (!accessToken) return <StaffLogin />;
-  return <StaffShell>{children}</StaffShell>;
+  return <StaffShell><Suspense fallback={<RouteLoading />}>{children}</Suspense></StaffShell>;
+}
+
+function RouteLoading() {
+  return <div className="grid min-h-72 place-items-center rounded-2xl border border-[#dce3db] bg-white text-sm text-[#74827b]"><div className="text-center"><span className="mx-auto block h-8 w-8 animate-spin rounded-full border-2 border-[#d9f99d] border-t-[#17352e]" /><p className="mt-3">Loading workspace…</p></div></div>;
 }
 
 function Router() {
@@ -28,7 +34,7 @@ function Router() {
   return (
     <Switch>
       <Route path={"/login"} component={StaffLogin} />
-      <Route path={"/portal"} component={MemberPortal} />
+      <Route path={"/portal"}><Suspense fallback={<RouteLoading />}><MemberPortal /></Suspense></Route>
       <Route path={"/"}><Protected><Overview /></Protected></Route>
       <Route path={"/register"}><Protected><Register /></Protected></Route>
       <Route path={"/inventory"}><Protected><Inventory /></Protected></Route>

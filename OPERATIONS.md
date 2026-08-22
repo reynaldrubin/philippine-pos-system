@@ -4,6 +4,8 @@
 
 This project is a Philippine retail Point-of-Sale and loyalty application built on **React 19, Vite, Tailwind CSS, Zustand, Express, tRPC, Drizzle ORM, and managed MySQL/TiDB**. The application uses Philippine Peso (`PHP`) values with two-decimal precision. Sales, inventory, receipts, payments, loyalty balances, and audit-oriented ledgers are stored through the managed SQL database.
 
+For the complete entity map and deployment release checklist, see [DATA_MODEL.md](./DATA_MODEL.md) and [DEPLOYMENT.md](./DEPLOYMENT.md). The documentation index is [PROJECT_GUIDE.md](./PROJECT_GUIDE.md).
+
 | Area | Primary implementation |
 |---|---|
 | Staff workspace | `/login` followed by the role-aware staff application |
@@ -70,7 +72,7 @@ The latest automated validation run completed successfully:
 |---|---|
 | TypeScript check | Passing |
 | Vitest suite | 43 tests across 19 test files passing |
-| Production build | Passing |
+| Production build | Passing with route and vendor code splitting; no chunk-size warning |
 | Restarted development service | Started without current browser or module errors |
 
 Authenticated browser workflows remain intentionally deferred at the user’s request because no temporary staff or member test credentials were supplied. The deferred checks are: owner-bootstrap UI in an uninitialized state; Admin staff profile editing; staff checkout and receipt flow; manager inventory, transfer, and report flow; and member portal login, dashboard loading, logout, and token clearing.

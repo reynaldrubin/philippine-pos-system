@@ -94,3 +94,5 @@
 - [ ] Add Vitest coverage for permissions, location scoping, loyalty calculations, immutable ledgers, stock transfer behavior, checkout atomicity, and void reversals.
 - [ ] Run type checking, migrations, server tests, production build, browser verification, and security/error-path validation.
 - [x] Document local setup, data model, test commands, deployment configuration, and operational workflows.
+- [x] Add an explicit data-model and deployment-configuration reference and link it from the project documentation index.
+- [x] Code-split protected application routes to eliminate the production JavaScript bundle warning.
