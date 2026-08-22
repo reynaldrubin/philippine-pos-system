@@ -2,7 +2,7 @@ import { formatRole } from "@/lib/currency";
 import { StaffMenuKey, StaffRole, usePosStore } from "@/stores/posStore";
 import { trpc } from "@/lib/trpc";
 import {
-  ArrowLeftRight, BadgePercent, ChevronDown, LayoutDashboard, LogOut, Menu, Package, ReceiptText, Settings2, ShoppingCart, Store, UsersRound, UserCog,
+  ArrowLeftRight, BadgePercent, BarChart3, ChevronDown, LayoutDashboard, LogOut, Menu, Package, ReceiptText, Settings2, ShoppingCart, Store, UsersRound, UserCog,
 } from "lucide-react";
 import { ReactNode, useEffect, useState } from "react";
 import { useLocation } from "wouter";
@@ -16,6 +16,7 @@ const navigation = [
   { path: "/transfers", key: "transfers", label: "Transfers", icon: ArrowLeftRight, roles: ["manager", "admin"] },
   { path: "/members", key: "members", label: "Loyalty members", icon: UsersRound, roles: ["cashier", "manager", "admin"] },
   { path: "/operations", key: "operations", label: "Operations", icon: Settings2, roles: ["manager", "admin"] },
+  { path: "/reports", key: "reports", label: "Reports", icon: BarChart3, roles: ["manager", "admin"] },
   { path: "/users", key: "users", label: "Staff & access", icon: UserCog, roles: ["admin"] },
 ];
 

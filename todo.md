@@ -22,6 +22,7 @@
 - [ ] Run an end-to-end loyalty workflow covering member enrollment, QR token lookup, points earning, member purchase history, and member portal access.
 - [ ] Run an end-to-end manager workflow covering product and inventory operations, low-stock visibility, transfers, cash sessions, and location-scoped reports.
 - [ ] Record end-to-end results, defects corrected, and remaining operational prerequisites in the project documentation.
+- [ ] Deferred by user: validate authenticated staff, manager, and member browser workflows when temporary test credentials are available.
 
 - [x] Rebuild the current managed Vite/tRPC/Drizzle/MySQL foundation into a strict Next.js, Express, Prisma, and PostgreSQL architecture while preserving the approved business requirements. Superseded by the user-approved managed stack.
 - [x] Configure the required PostgreSQL connection string securely and validate it through the strict-stack Prisma configuration. Superseded by the user-approved managed stack.
@@ -69,7 +70,7 @@
 - [ ] Build staff loyalty-member enrollment, member profile, e-card, purchase history, and points-ledger screens.
 - [x] Build operational dashboard views for active-location revenue summary, best-selling products, low-stock alerts, and cash-session status placeholders backed by the current data model.
 - [ ] Implement staff dashboard reports for daily revenue, top-selling products, location comparison, cash-session summaries, and low-stock alerts.
-- [ ] Implement loyalty reports for member enrollment, points issued, reversal activity, and top members with authorized location filters.
+- [x] Implement loyalty reports for member enrollment, points issued, reversal activity, and top members with authorized location filters.
 - [x] Build a role-aware staff application shell with active location selection, protected navigation, and accessible responsive layouts.
 - [x] Build register UI with product search, cart state, member lookup, QR token entry, payment selection, checkout confirmation, and receipt display.
 - [x] Clear expired or invalid staff JWT sessions and redirect safely to the staff login screen.
@@ -79,14 +80,17 @@
 - [x] Add manager-authorized daily revenue and top-product report procedures and show their active-location results in the dashboard.
 - [ ] Add reporting API queries and replace operational dashboard metric placeholders with authorized live revenue, product, cash-session, and loyalty totals.
 - [ ] Build product, category, location inventory, stock adjustment, transfer, register, cash-session, user, and location management interfaces.
+- [x] Add actual location status, activation/reactivation, and editable details to the Admin location-management interface.
+- [x] Add low-stock alerts to the dedicated reports workspace and replace remaining Overview cash-session and loyalty placeholders with authorized live metrics.
+- [ ] Add Reports navigation and explicit loading states to management and report workspaces, then verify their accessible route rendering.
 - [x] Build staff loyalty-member screens for enrollment, e-card display, purchase history, points ledger, and manual point adjustment.
 - [x] Add loading, error, empty, success, and failure states to staff loyalty member activity and manual adjustment workflows.
-- [ ] Add regression coverage for append-only manual point adjustments, balance updates, and member activity responses.
-- [ ] Surface member contact, status, joined date, and lifetime point totals in the staff profile panel.
-- [ ] Add service or route coverage for loyalty detail, purchase history, point history, and append-only adjustment balance updates.
+- [x] Add regression coverage for append-only manual point adjustments, balance updates, and member activity responses.
+- [x] Surface member contact, status, joined date, and lifetime point totals in the staff profile panel.
+- [x] Add service or route coverage for loyalty detail, purchase history, point history, and append-only adjustment balance updates.
 - [x] Build a separate member loyalty portal with member login, PHP purchase history, balance, lifetime earnings, immutable ledger, and scannable e-card display.
 - [ ] Add isolated member JWT persistence, route-aware API authorization, and safe member-session logout behavior for the loyalty portal.
 - [ ] Verify authenticated member login, dashboard loading, logout, and session-token clearing in the portal.
 - [ ] Add Vitest coverage for permissions, location scoping, loyalty calculations, immutable ledgers, stock transfer behavior, checkout atomicity, and void reversals.
 - [ ] Run type checking, migrations, server tests, production build, browser verification, and security/error-path validation.
-- [ ] Document local setup, data model, test commands, deployment configuration, and operational workflows.
+- [x] Document local setup, data model, test commands, deployment configuration, and operational workflows.

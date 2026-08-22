@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TrpcContext } from "./_core/context";
 import { issueStaffAccessToken } from "./authTokens";
 
-const dbMocks = vi.hoisted(() => ({ getStaffById: vi.fn(), hasLocationAccess: vi.fn(), getLocationDashboardReport: vi.fn() }));
+const dbMocks = vi.hoisted(() => ({ getStaffById: vi.fn(), hasLocationAccess: vi.fn(), getLocationDashboardReport: vi.fn(), getCashSessionReport: vi.fn(), getLoyaltyLocationReport: vi.fn(), listLocationsForUser: vi.fn() }));
 vi.mock("./db", async importOriginal => ({ ...(await importOriginal<typeof import("./db")>()), ...dbMocks }));
 
 import { appRouter } from "./routers";
@@ -29,5 +29,22 @@ describe("location dashboard reporting authorization", () => {
     dbMocks.getLocationDashboardReport.mockResolvedValue({ revenue: "1250.00", transactionCount: 4, topProducts: [{ name: "Coffee", sku: "COF-001", quantity: "5", revenue: "500.00" }] });
     const caller = await managerCaller();
     await expect(caller.reports.locationDashboard({ locationId: 4 })).resolves.toMatchObject({ revenue: "1250.00", transactionCount: 4, topProducts: [{ sku: "COF-001" }] });
+  });
+
+  it("does not expose cash or loyalty summaries outside the manager's assigned locations", async () => {
+    dbMocks.hasLocationAccess.mockResolvedValue(false);
+    const caller = await managerCaller();
+    await expect(caller.reports.cashSessions({ locationId: 42 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.reports.loyalty({ locationId: 42 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(dbMocks.getCashSessionReport).not.toHaveBeenCalled();
+    expect(dbMocks.getLoyaltyLocationReport).not.toHaveBeenCalled();
+  });
+
+  it("limits a manager comparison to locations assigned to that manager", async () => {
+    dbMocks.listLocationsForUser.mockResolvedValue([{ id: 4, code: "MNL-01", name: "Manila Store", type: "store", isPrimary: true }]);
+    dbMocks.getLocationDashboardReport.mockResolvedValue({ revenue: "900.00", transactionCount: 3, topProducts: [] });
+    const caller = await managerCaller();
+    await expect(caller.reports.locationComparison()).resolves.toEqual([{ location: expect.objectContaining({ id: 4 }), revenue: "900.00", transactionCount: 3, topProducts: [] }]);
+    expect(dbMocks.getLocationDashboardReport).toHaveBeenCalledWith(4);
   });
 });

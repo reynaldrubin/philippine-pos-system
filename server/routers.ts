@@ -24,6 +24,8 @@ import {
   getLoyaltyMemberById,
   getLoyaltyMemberByIdentifier,
   getLoyaltyMemberDetail,
+  getCashSessionReport,
+  getLoyaltyLocationReport,
   getLocationDashboardReport,
   lookupLoyaltyMemberForStaff,
   getRegisterAtLocation,
@@ -92,6 +94,20 @@ export const appRouter = router({
       .query(async ({ ctx, input }) => {
         if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, input.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this location" });
         return getLocationDashboardReport(input.locationId);
+      }),
+    locationComparison: managerProcedure.query(async ({ ctx }) => {
+      const locations = ctx.staff.role === "admin" ? await listAllLocations() : await listLocationsForUser(ctx.staff.userId);
+      return Promise.all(locations.filter(location => "isActive" in location ? location.isActive : true).map(async location => ({ location, ...(await getLocationDashboardReport(location.id)) })));
+    }),
+    cashSessions: managerProcedure.input(z.object({ locationId: z.number().int().positive() }))
+      .query(async ({ ctx, input }) => {
+        if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, input.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this location" });
+        return getCashSessionReport(input.locationId);
+      }),
+    loyalty: managerProcedure.input(z.object({ locationId: z.number().int().positive() }))
+      .query(async ({ ctx, input }) => {
+        if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, input.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this location" });
+        return getLoyaltyLocationReport(input.locationId);
       }),
   }),
   auth: router({
@@ -202,6 +218,7 @@ export const appRouter = router({
       const allLocations = await listAllLocations();
       return allLocations.map(location => ({
         id: location.id, code: location.code, name: location.name, type: location.type, isPrimary: false,
+        isActive: location.isActive, address: location.address, city: location.city, province: location.province, postalCode: location.postalCode, phone: location.phone,
       }));
     }),
     create: adminStaffProcedure

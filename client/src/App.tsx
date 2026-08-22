@@ -12,6 +12,7 @@ import MemberPortal from "./pages/MemberPortal";
 import Operations from "./pages/Operations";
 import Overview from "./pages/Overview";
 import Register from "./pages/Register";
+import Reports from "./pages/Reports";
 import StaffLogin from "./pages/StaffLogin";
 import Transfers from "./pages/Transfers";
 import Users from "./pages/Users";
@@ -34,6 +35,7 @@ function Router() {
       <Route path={"/transfers"}><Protected><Transfers /></Protected></Route>
       <Route path={"/members"}><Protected><Members /></Protected></Route>
       <Route path={"/operations"}><Protected><Operations /></Protected></Route>
+      <Route path={"/reports"}><Protected><Reports /></Protected></Route>
       <Route path={"/users"}><Protected><Users /></Protected></Route>
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

@@ -114,6 +114,61 @@ export async function getLocationDashboardReport(locationId: number) {
   return { revenue: String(totals[0]?.revenue ?? "0.00"), transactionCount: Number(totals[0]?.transactionCount ?? 0), topProducts };
 }
 
+export async function getCashSessionReport(locationId: number) {
+  const db = await getDb();
+  if (!db) return { openCount: 0, closedCount: 0, totalVariance: "0.00", sessions: [] };
+  const sessions = await db.select({
+    id: cashSessions.id,
+    status: cashSessions.status,
+    registerCode: registers.code,
+    registerName: registers.name,
+    openingCash: cashSessions.openingCash,
+    expectedCash: cashSessions.expectedCash,
+    closingCash: cashSessions.closingCash,
+    variance: cashSessions.variance,
+    openedAt: cashSessions.openedAt,
+    closedAt: cashSessions.closedAt,
+  }).from(cashSessions).innerJoin(registers, eq(cashSessions.registerId, registers.id))
+    .where(eq(registers.locationId, locationId)).orderBy(desc(cashSessions.openedAt)).limit(30);
+  const openCount = sessions.filter(session => session.status === "open").length;
+  const closedCount = sessions.length - openCount;
+  const totalVariance = sessions.reduce((sum, session) => sum + Number(session.variance ?? 0), 0).toFixed(2);
+  return { openCount, closedCount, totalVariance, sessions };
+}
+
+export async function getLoyaltyLocationReport(locationId: number) {
+  const db = await getDb();
+  if (!db) return { activeMembers: 0, enrolledToday: 0, pointsIssuedToday: 0, pointsReversedToday: 0, adjustmentsToday: 0, topMembers: [] };
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  const end = new Date(); end.setHours(23, 59, 59, 999);
+  const [members] = await db.select({
+    activeMembers: sql<number>`coalesce(sum(case when ${loyaltyMembers.status} = 'active' then 1 else 0 end), 0)`,
+    enrolledToday: sql<number>`coalesce(sum(case when ${loyaltyMembers.joinedAt} >= ${start} and ${loyaltyMembers.joinedAt} <= ${end} then 1 else 0 end), 0)`,
+  }).from(loyaltyMembers).where(eq(loyaltyMembers.joinedLocationId, locationId));
+  const [points] = await db.select({
+    pointsIssuedToday: sql<number>`coalesce(sum(case when ${loyaltyTransactions.type} = 'earn' then ${loyaltyTransactions.points} else 0 end), 0)`,
+    pointsReversedToday: sql<number>`coalesce(sum(case when ${loyaltyTransactions.type} = 'reversal' then abs(${loyaltyTransactions.points}) else 0 end), 0)`,
+    adjustmentsToday: sql<number>`coalesce(sum(case when ${loyaltyTransactions.type} = 'adjustment' then 1 else 0 end), 0)`,
+  }).from(loyaltyTransactions).where(and(eq(loyaltyTransactions.locationId, locationId), gte(loyaltyTransactions.createdAt, start), lte(loyaltyTransactions.createdAt, end)));
+  const topMembers = await db.select({
+    memberNumber: loyaltyMembers.memberNumber,
+    firstName: loyaltyMembers.firstName,
+    lastName: loyaltyMembers.lastName,
+    pointsIssued: sql<number>`coalesce(sum(case when ${loyaltyTransactions.type} = 'earn' then ${loyaltyTransactions.points} else 0 end), 0)`,
+  }).from(loyaltyTransactions).innerJoin(loyaltyMembers, eq(loyaltyTransactions.memberId, loyaltyMembers.id))
+    .where(eq(loyaltyTransactions.locationId, locationId))
+    .groupBy(loyaltyMembers.id, loyaltyMembers.memberNumber, loyaltyMembers.firstName, loyaltyMembers.lastName)
+    .orderBy(sql`sum(case when ${loyaltyTransactions.type} = 'earn' then ${loyaltyTransactions.points} else 0 end) desc`).limit(5);
+  return {
+    activeMembers: Number(members?.activeMembers ?? 0),
+    enrolledToday: Number(members?.enrolledToday ?? 0),
+    pointsIssuedToday: Number(points?.pointsIssuedToday ?? 0),
+    pointsReversedToday: Number(points?.pointsReversedToday ?? 0),
+    adjustmentsToday: Number(points?.adjustmentsToday ?? 0),
+    topMembers: topMembers.map(member => ({ ...member, pointsIssued: Number(member.pointsIssued ?? 0) })),
+  };
+}
+
 export async function listLocationsForUser(userId: number) {
   const db = await getDb();
   if (!db) return [];
@@ -626,18 +681,20 @@ export async function listMemberPointTransactions(memberId: number) {
     .from(loyaltyTransactions).where(eq(loyaltyTransactions.memberId, memberId)).orderBy(desc(loyaltyTransactions.createdAt)).limit(50);
 }
 
+export async function applyLoyaltyAdjustmentInTransaction(tx: any, input: { memberId: number; points: number; note: string; createdById: number }) {
+  const account = await tx.select().from(loyaltyAccounts).where(eq(loyaltyAccounts.memberId, input.memberId)).limit(1);
+  if (!account[0]) throw new Error("Loyalty account was not found");
+  const balanceAfter = account[0].currentPoints + input.points;
+  if (balanceAfter < 0) throw new Error("Point adjustment cannot create a negative balance");
+  await tx.update(loyaltyAccounts).set({ currentPoints: balanceAfter }).where(eq(loyaltyAccounts.id, account[0].id));
+  await tx.insert(loyaltyTransactions).values({ memberId: input.memberId, accountId: account[0].id, type: "adjustment", points: input.points, balanceAfter, note: input.note.trim(), createdById: input.createdById });
+  return balanceAfter;
+}
+
 export async function adjustLoyaltyPoints(input: { memberId: number; points: number; note: string; createdById: number }) {
   const db = await getDb();
   if (!db) throw new Error("Database is unavailable");
-  return db.transaction(async tx => {
-    const account = await tx.select().from(loyaltyAccounts).where(eq(loyaltyAccounts.memberId, input.memberId)).limit(1);
-    if (!account[0]) throw new Error("Loyalty account was not found");
-    const balanceAfter = account[0].currentPoints + input.points;
-    if (balanceAfter < 0) throw new Error("Point adjustment cannot create a negative balance");
-    await tx.update(loyaltyAccounts).set({ currentPoints: balanceAfter }).where(eq(loyaltyAccounts.id, account[0].id));
-    await tx.insert(loyaltyTransactions).values({ memberId: input.memberId, accountId: account[0].id, type: "adjustment", points: input.points, balanceAfter, note: input.note.trim(), createdById: input.createdById });
-    return balanceAfter;
-  });
+  return db.transaction(tx => applyLoyaltyAdjustmentInTransaction(tx, input));
 }
 
 type CreateLoyaltyMemberInput = {
