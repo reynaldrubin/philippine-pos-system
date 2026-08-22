@@ -8,6 +8,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Inventory from "./pages/Inventory";
 import Members from "./pages/Members";
+import MemberPortal from "./pages/MemberPortal";
 import Operations from "./pages/Operations";
 import Overview from "./pages/Overview";
 import Register from "./pages/Register";
@@ -26,6 +27,7 @@ function Router() {
   return (
     <Switch>
       <Route path={"/login"} component={StaffLogin} />
+      <Route path={"/portal"} component={MemberPortal} />
       <Route path={"/"}><Protected><Overview /></Protected></Route>
       <Route path={"/register"}><Protected><Register /></Protected></Route>
       <Route path={"/inventory"}><Protected><Inventory /></Protected></Route>

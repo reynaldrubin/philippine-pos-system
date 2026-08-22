@@ -33,6 +33,7 @@ import {
   getStaffMenuAccess,
   getStockTransfer,
   hasLocationAccess,
+  hasInitializedAdmin,
   listAllLocations,
   listCategories,
   listInventoryForLocation,
@@ -138,6 +139,7 @@ export const appRouter = router({
     }),
   }),
   bootstrap: router({
+    status: publicProcedure.query(async () => ({ initialized: await hasInitializedAdmin() })),
     establishAdminPassword: adminProcedure
       .input(z.object({ password: z.string().min(12).max(128) }))
       .mutation(async ({ ctx, input }) => {

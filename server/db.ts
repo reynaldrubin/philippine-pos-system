@@ -86,6 +86,14 @@ export async function getStaffById(id: number) {
   return result[0];
 }
 
+export async function hasInitializedAdmin() {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.select({ id: users.id }).from(users)
+    .where(and(eq(users.role, "admin"), eq(users.isActive, true), sql`${users.passwordHash} is not null`)).limit(1);
+  return Boolean(result[0]);
+}
+
 export async function listStaffAccounts() {
   const db = await getDb();
   if (!db) return [];

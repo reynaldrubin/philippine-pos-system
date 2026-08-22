@@ -1,5 +1,11 @@
 # Project TODO
 
+- [x] Fix the owner bootstrap flow so authenticated project owners can initialize the first Admin account and do not remain stuck on the repeated owner sign-in prompt.
+- [x] Add regression coverage for owner bootstrap readiness, successful Admin initialization, and post-bootstrap staff login state.
+- [x] Add owner-bootstrap procedure coverage for Admin password initialization and post-bootstrap staff token issuance.
+- [ ] Verify the uninitialized owner-bootstrap UI path and the resulting staff login flow in a controlled browser or integration test.
+- [ ] Add focused interface coverage for the uninitialized owner-bootstrap state, initialization submission, and transition to a staff session.
+
 - [x] Add Philippine retail staff hierarchy metadata that maps Head Office/Owner, Operations or Area Manager, Branch or Store Manager, Supervisor, Cashier, and Sales Associate job titles to the existing Admin, Manager, and Cashier authorization roles.
 - [x] Implement Admin user management for creating, activating/deactivating, and updating staff accounts with job title and role validation.
 - [x] Implement staff-to-location assignment and primary-branch selection within the user-management workflow.
@@ -17,11 +23,11 @@
 - [ ] Run an end-to-end manager workflow covering product and inventory operations, low-stock visibility, transfers, cash sessions, and location-scoped reports.
 - [ ] Record end-to-end results, defects corrected, and remaining operational prerequisites in the project documentation.
 
-- [ ] Rebuild the current managed Vite/tRPC/Drizzle/MySQL foundation into a strict Next.js, Express, Prisma, and PostgreSQL architecture while preserving the approved business requirements.
-- [ ] Configure the required PostgreSQL connection string securely and validate it through the strict-stack Prisma configuration.
-- [ ] Create the Next.js application structure with Tailwind CSS and Zustand cart state, replacing the current Vite frontend structure.
-- [ ] Create a standalone Express API service with JWT staff/member authentication and Prisma database access, replacing the current tRPC data layer.
-- [ ] Recreate the completed Phase 2 locations, roles, cash-session, loyalty-member, e-card, and authorization foundations on Prisma/PostgreSQL.
+- [x] Rebuild the current managed Vite/tRPC/Drizzle/MySQL foundation into a strict Next.js, Express, Prisma, and PostgreSQL architecture while preserving the approved business requirements. Superseded by the user-approved managed stack.
+- [x] Configure the required PostgreSQL connection string securely and validate it through the strict-stack Prisma configuration. Superseded by the user-approved managed stack.
+- [x] Create the Next.js application structure with Tailwind CSS and Zustand cart state, replacing the current Vite frontend structure. Superseded by the user-approved managed stack.
+- [x] Create a standalone Express API service with JWT staff/member authentication and Prisma database access, replacing the current tRPC data layer. Superseded by the user-approved managed stack.
+- [x] Recreate the completed Phase 2 locations, roles, cash-session, loyalty-member, e-card, and authorization foundations on Prisma/PostgreSQL. Superseded by the user-approved managed stack.
 - [x] Retain the managed React/Vite, Express/tRPC, Drizzle, and managed SQL stack and resume implementation from the Phase 3 inventory domain.
 
 - [x] Define database enums and relational schema for staff roles, locations, registers, cash sessions, catalog, inventory, sales, payments, receipts, loyalty members, e-cards, loyalty accounts, and immutable point transactions.
@@ -78,7 +84,9 @@
 - [ ] Add regression coverage for append-only manual point adjustments, balance updates, and member activity responses.
 - [ ] Surface member contact, status, joined date, and lifetime point totals in the staff profile panel.
 - [ ] Add service or route coverage for loyalty detail, purchase history, point history, and append-only adjustment balance updates.
-- [ ] Build a separate member loyalty portal with member login, PHP purchase history, balance, lifetime earnings, immutable ledger, and scannable e-card display.
+- [x] Build a separate member loyalty portal with member login, PHP purchase history, balance, lifetime earnings, immutable ledger, and scannable e-card display.
+- [ ] Add isolated member JWT persistence, route-aware API authorization, and safe member-session logout behavior for the loyalty portal.
+- [ ] Verify authenticated member login, dashboard loading, logout, and session-token clearing in the portal.
 - [ ] Add Vitest coverage for permissions, location scoping, loyalty calculations, immutable ledgers, stock transfer behavior, checkout atomicity, and void reversals.
 - [ ] Run type checking, migrations, server tests, production build, browser verification, and security/error-path validation.
 - [ ] Document local setup, data model, test commands, deployment configuration, and operational workflows.

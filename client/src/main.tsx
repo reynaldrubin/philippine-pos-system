@@ -7,6 +7,8 @@ import superjson from "superjson";
 import App from "./App";
 import { startLogin } from "./const";
 import "./index.css";
+import { accessTokenForRoute, isMemberPortalRoute } from "./lib/routeAuth";
+import { getMemberAccessToken, useMemberPortalStore } from "./stores/memberPortalStore";
 import { getStaffAccessToken, usePosStore } from "./stores/posStore";
 
 const queryClient = new QueryClient();
@@ -15,7 +17,14 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
   if (typeof window === "undefined") return;
 
-  const hasStaffSession = Boolean(getStaffAccessToken());
+  const isMemberPortal = isMemberPortalRoute(window.location.pathname);
+  const hasMemberSession = isMemberPortal && Boolean(getMemberAccessToken());
+  if (hasMemberSession && error.data?.code === "UNAUTHORIZED") {
+    useMemberPortalStore.getState().clearSession();
+    window.location.replace("/portal");
+    return;
+  }
+  const hasStaffSession = !isMemberPortal && Boolean(getStaffAccessToken());
   const isStaffUnauthorized = hasStaffSession && error.data?.code === "UNAUTHORIZED";
   if (isStaffUnauthorized) {
     usePosStore.getState().clearSession();
@@ -52,8 +61,8 @@ const trpcClient = trpc.createClient({
       url: "/api/trpc",
       transformer: superjson,
       headers() {
-        const staffToken = getStaffAccessToken();
-        if (staffToken) return { Authorization: `Bearer ${staffToken}` };
+        const token = accessTokenForRoute(window.location.pathname, getMemberAccessToken(), getStaffAccessToken());
+        if (token) return { Authorization: `Bearer ${token}` };
         // Preview auto-login fallback: when the browser blocks iframe cookies
         // (Safari ITP / private browsing / WebView), the runtime mirrors the
         // session into sessionStorage so we can forward it as a Bearer token.
