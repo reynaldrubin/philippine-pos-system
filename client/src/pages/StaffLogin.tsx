@@ -1,5 +1,5 @@
 import { trpc } from "@/lib/trpc";
-import { STAFF_ACCESS_TOKEN_KEY, StaffRole, usePosStore } from "@/stores/posStore";
+import { StaffRole, usePosStore } from "@/stores/posStore";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
 import { getOwnerBootstrapUiState } from "@/lib/ownerBootstrapUi";
@@ -20,7 +20,11 @@ export default function StaffLogin() {
     setSession({ ...session, user: { ...session.user, role: session.user.role as StaffRole }, menuKeys: session.menuKeys });
     setLocation("/");
   } });
-  const bootstrap = trpc.bootstrap.establishAdminPassword.useMutation({ onSuccess: result => { sessionStorage.setItem(STAFF_ACCESS_TOKEN_KEY, result.accessToken); window.location.reload(); } });
+  const bootstrap = trpc.bootstrap.establishAdminPassword.useMutation({ onSuccess: session => {
+    if (!( ["cashier", "manager", "admin"] as string[]).includes(session.user.role)) return;
+    setSession({ ...session, user: { ...session.user, role: session.user.role as StaffRole }, menuKeys: session.menuKeys });
+    setLocation("/");
+  } });
   const ownerBootstrapUiState = getOwnerBootstrapUiState({ isLoading: bootstrapStatus.isLoading, initialized: bootstrapStatus.data?.initialized, isOwnerAuthenticated: isAuthenticated });
 
   const submit = (event: FormEvent) => {

@@ -71,8 +71,20 @@ The latest automated validation run completed successfully:
 | Check | Result |
 |---|---|
 | TypeScript check | Passing |
-| Vitest suite | 63 tests across 25 test files passing |
+| Vitest suite | 62 tests across 25 test files passing |
 | Production build | Passing with route and vendor code splitting; no chunk-size warning |
+
+## Validation record and outstanding acceptance checks
+
+| Workflow or control | Evidence completed | Current result |
+|---|---|---|
+| Owner bootstrap | Status, initialization, post-bootstrap staff token, visible state selection, and browser-like component transition to staff session | Passing |
+| Staff checkout and receipt integrity | PHP pricing, payment failure rollback, idempotency, receipt content, stock movement, and completed-sale void reversal tests | Passing |
+| Manager operations | Location authorization, catalog archive protection, stock-transfer request/shipment/receipt/cancellation, inventory movements, cash-session report authorization, and default Reports visibility tests | Passing |
+| Loyalty member portal | Member-auth authorization, isolated-token routing, login, loading, dashboard, QR-card payload, logout, and token-clearing component tests | Passing |
+| Public routes | Staff login and member portal rendered after route/vendor code splitting | Passing |
+
+The following acceptance checks intentionally remain **deferred at the user's request** because they require temporary, valid staff and member credentials in the live browser: Admin staff profile mutation feedback; cashier checkout through a live session; manager inventory, transfer, cash-session, and report interactions; and member portal login with a live account. Before publication, run these checks with non-production test credentials, confirm the expected records in the managed database, and retain the results with the release record.
 | Restarted development service | Started without current browser or module errors |
 
 Authenticated browser workflows remain intentionally deferred at the user’s request because no temporary staff or member test credentials were supplied. The deferred checks are: owner-bootstrap UI in an uninitialized state; Admin staff profile editing; staff checkout and receipt flow; manager inventory, transfer, and report flow; and member portal login, dashboard loading, logout, and token clearing.

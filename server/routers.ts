@@ -161,7 +161,10 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const passwordHash = await hashPassword(input.password);
         await setStaffPasswordAndAdminRole(ctx.user.id, passwordHash);
-        return { accessToken: await issueStaffAccessToken(ctx.user.id, "admin") };
+        const staff = await getStaffById(ctx.user.id);
+        if (!staff || !staff.isActive) throw new TRPCError({ code: "UNAUTHORIZED", message: "Admin account is unavailable after initialization" });
+        const role = "admin" as const;
+        return { accessToken: await issueStaffAccessToken(ctx.user.id, role), user: { ...staffProfile(staff), role }, locations: await listLocationsForUser(staff.id), menuKeys: await getStaffMenuAccess(staff.id, role) };
       }),
   }),
   staff: router({
