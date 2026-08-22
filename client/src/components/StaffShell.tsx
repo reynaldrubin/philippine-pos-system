@@ -1,8 +1,8 @@
 import { formatRole } from "@/lib/currency";
-import { StaffRole, usePosStore } from "@/stores/posStore";
+import { StaffMenuKey, StaffRole, usePosStore } from "@/stores/posStore";
 import { trpc } from "@/lib/trpc";
 import {
-  ArrowLeftRight, BadgePercent, ChevronDown, LayoutDashboard, LogOut, Menu, Package, ReceiptText, Settings2, ShoppingCart, Store, UsersRound,
+  ArrowLeftRight, BadgePercent, ChevronDown, LayoutDashboard, LogOut, Menu, Package, ReceiptText, Settings2, ShoppingCart, Store, UsersRound, UserCog,
 } from "lucide-react";
 import { ReactNode, useEffect, useState } from "react";
 import { useLocation } from "wouter";
@@ -10,18 +10,19 @@ import { useLocation } from "wouter";
 type StaffShellProps = { children: ReactNode };
 
 const navigation = [
-  { path: "/", label: "Overview", icon: LayoutDashboard, roles: ["cashier", "manager", "admin"] },
-  { path: "/register", label: "Register", icon: ShoppingCart, roles: ["cashier", "manager", "admin"] },
-  { path: "/inventory", label: "Inventory", icon: Package, roles: ["manager", "admin"] },
-  { path: "/transfers", label: "Transfers", icon: ArrowLeftRight, roles: ["manager", "admin"] },
-  { path: "/members", label: "Loyalty members", icon: UsersRound, roles: ["cashier", "manager", "admin"] },
-  { path: "/operations", label: "Operations", icon: Settings2, roles: ["manager", "admin"] },
+  { path: "/", key: "overview", label: "Overview", icon: LayoutDashboard, roles: ["cashier", "manager", "admin"] },
+  { path: "/register", key: "register", label: "Register", icon: ShoppingCart, roles: ["cashier", "manager", "admin"] },
+  { path: "/inventory", key: "inventory", label: "Inventory", icon: Package, roles: ["manager", "admin"] },
+  { path: "/transfers", key: "transfers", label: "Transfers", icon: ArrowLeftRight, roles: ["manager", "admin"] },
+  { path: "/members", key: "members", label: "Loyalty members", icon: UsersRound, roles: ["cashier", "manager", "admin"] },
+  { path: "/operations", key: "operations", label: "Operations", icon: Settings2, roles: ["manager", "admin"] },
+  { path: "/users", key: "users", label: "Staff & access", icon: UserCog, roles: ["admin"] },
 ];
 
 export default function StaffShell({ children }: StaffShellProps) {
   const [location, setLocation] = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { accessToken, user, locations, activeLocationId, setActiveLocation, setSession, clearSession } = usePosStore();
+  const { accessToken, user, locations, menuKeys, activeLocationId, setActiveLocation, setSession, clearSession } = usePosStore();
   const profile = trpc.staffAuth.me.useQuery(undefined, { enabled: Boolean(accessToken), retry: false });
 
   useEffect(() => {
@@ -31,8 +32,9 @@ export default function StaffShell({ children }: StaffShellProps) {
         name: profile.data.user.name,
         email: profile.data.user.email,
         role: profile.data.user.role as StaffRole,
+        jobTitle: profile.data.user.jobTitle,
       };
-      setSession({ accessToken, user: staffUser, locations: profile.data.locations });
+      setSession({ accessToken, user: staffUser, locations: profile.data.locations, menuKeys: profile.data.menuKeys });
     }
   }, [accessToken, profile.data, setSession]);
 
@@ -44,7 +46,7 @@ export default function StaffShell({ children }: StaffShellProps) {
   }, [clearSession, profile.error, setLocation]);
 
   const activeLocation = locations.find(item => item.id === activeLocationId);
-  const visibleNavigation = navigation.filter(item => user && item.roles.includes(user.role));
+  const visibleNavigation = navigation.filter(item => user && item.roles.includes(user.role) && menuKeys.includes(item.key as StaffMenuKey));
 
   const signOut = () => {
     clearSession();
@@ -91,7 +93,7 @@ export default function StaffShell({ children }: StaffShellProps) {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="hidden text-right sm:block"><p className="text-sm font-semibold leading-none">{user?.name || "Staff account"}</p><p className="mt-1 text-xs text-[#74827b]">{formatRole(user?.role)}</p></div>
+            <div className="hidden text-right sm:block"><p className="text-sm font-semibold leading-none">{user?.name || "Staff account"}</p><p className="mt-1 text-xs text-[#74827b]">{user?.jobTitle || formatRole(user?.role)}</p></div>
             <span className="grid h-10 w-10 place-items-center rounded-full bg-[#d9f99d] text-sm font-bold text-[#17352e]">{user?.name?.slice(0, 1).toUpperCase() || "S"}</span>
           </div>
         </header>

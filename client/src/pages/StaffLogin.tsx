@@ -15,7 +15,7 @@ export default function StaffLogin() {
   const { isAuthenticated } = useAuth();
   const login = trpc.staffAuth.login.useMutation({ onSuccess: session => {
     if (!(["cashier", "manager", "admin"] as string[]).includes(session.user.role)) return;
-    setSession({ ...session, user: { ...session.user, role: session.user.role as StaffRole } });
+    setSession({ ...session, user: { ...session.user, role: session.user.role as StaffRole }, menuKeys: session.menuKeys });
     setLocation("/");
   } });
   const bootstrap = trpc.bootstrap.establishAdminPassword.useMutation({ onSuccess: result => { sessionStorage.setItem(STAFF_ACCESS_TOKEN_KEY, result.accessToken); window.location.reload(); } });

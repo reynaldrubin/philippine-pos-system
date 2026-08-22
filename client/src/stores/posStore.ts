@@ -2,7 +2,8 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 export type StaffRole = "cashier" | "manager" | "admin";
-export type StaffUser = { id: number; name: string | null; email: string | null; role: StaffRole };
+export type StaffMenuKey = "overview" | "register" | "inventory" | "transfers" | "members" | "operations" | "reports" | "users";
+export type StaffUser = { id: number; name: string | null; email: string | null; role: StaffRole; jobTitle?: string | null };
 export type StaffLocation = { id: number; code: string; name: string; type: "store" | "branch" | "warehouse" | "kiosk"; isPrimary: boolean };
 export type CartItem = { productId: number; sku: string; name: string; unitPrice: string; quantity: string; taxRate: string; isTaxInclusive: boolean };
 
@@ -12,10 +13,11 @@ type PosState = {
   accessToken: string | null;
   user: StaffUser | null;
   locations: StaffLocation[];
+  menuKeys: StaffMenuKey[];
   activeLocationId: number | null;
   cart: CartItem[];
   selectedMember: { id: number; memberNumber: string; name: string; currentPoints: number } | null;
-  setSession: (session: { accessToken: string; user: StaffUser; locations: StaffLocation[] }) => void;
+  setSession: (session: { accessToken: string; user: StaffUser; locations: StaffLocation[]; menuKeys?: StaffMenuKey[] }) => void;
   clearSession: () => void;
   setActiveLocation: (locationId: number) => void;
   addCartItem: (item: Omit<CartItem, "quantity">) => void;
@@ -31,16 +33,17 @@ export const usePosStore = create<PosState>()(
       accessToken: typeof window === "undefined" ? null : sessionStorage.getItem(STAFF_ACCESS_TOKEN_KEY),
       user: null,
       locations: [],
+      menuKeys: [],
       activeLocationId: null,
       cart: [],
       selectedMember: null,
-      setSession: ({ accessToken, user, locations }) => {
+      setSession: ({ accessToken, user, locations, menuKeys = [] }) => {
         sessionStorage.setItem(STAFF_ACCESS_TOKEN_KEY, accessToken);
-        set({ accessToken, user, locations, activeLocationId: locations.find(location => location.isPrimary)?.id ?? locations[0]?.id ?? null });
+        set({ accessToken, user, locations, menuKeys, activeLocationId: locations.find(location => location.isPrimary)?.id ?? locations[0]?.id ?? null });
       },
       clearSession: () => {
         sessionStorage.removeItem(STAFF_ACCESS_TOKEN_KEY);
-        set({ accessToken: null, user: null, locations: [], activeLocationId: null, cart: [], selectedMember: null });
+        set({ accessToken: null, user: null, locations: [], menuKeys: [], activeLocationId: null, cart: [], selectedMember: null });
       },
       setActiveLocation: activeLocationId => set({ activeLocationId, cart: [], selectedMember: null }),
       addCartItem: item => set(state => {
@@ -53,7 +56,7 @@ export const usePosStore = create<PosState>()(
       clearCart: () => set({ cart: [], selectedMember: null }),
       setSelectedMember: selectedMember => set({ selectedMember }),
     }),
-    { name: "pos-staff-state", storage: createJSONStorage(() => sessionStorage), partialize: state => ({ user: state.user, locations: state.locations, activeLocationId: state.activeLocationId }) },
+    { name: "pos-staff-state", storage: createJSONStorage(() => sessionStorage), partialize: state => ({ user: state.user, locations: state.locations, menuKeys: state.menuKeys, activeLocationId: state.activeLocationId }) },
   ),
 );
 

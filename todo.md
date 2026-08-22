@@ -1,5 +1,22 @@
 # Project TODO
 
+- [x] Add Philippine retail staff hierarchy metadata that maps Head Office/Owner, Operations or Area Manager, Branch or Store Manager, Supervisor, Cashier, and Sales Associate job titles to the existing Admin, Manager, and Cashier authorization roles.
+- [x] Implement Admin user management for creating, activating/deactivating, and updating staff accounts with job title and role validation.
+- [x] Implement staff-to-location assignment and primary-branch selection within the user-management workflow.
+- [x] Implement configurable staff menu assignments that apply least-privilege menu visibility on top of the server-enforced role permissions.
+- [x] Build an Admin staff-management screen for hierarchy, account creation, branch assignments, active status, and menu access.
+- [x] Add loading, success, and error feedback for all Admin staff-management actions, including status, branch, and menu changes.
+- [ ] Expose existing staff profile editing for hierarchy job title, role, and updateable account details, and validate its full workflow.
+- [x] Add staff-update regression coverage for valid persisted hierarchy edits and rejected job-title/role mismatches.
+- [ ] Run browser verification of the Admin staff-management page for profile editing and mutation feedback.
+- [x] Run and record a production build after the latest staff-management changes.
+- [x] Add tests proving Philippine-hierarchy role mapping, location assignment, and menu assignment cannot bypass backend permissions.
+
+- [ ] Run an end-to-end staff workflow covering owner bootstrap, staff login, location context, register/cart, mock checkout, receipt retrieval, and logout/session expiry handling.
+- [ ] Run an end-to-end loyalty workflow covering member enrollment, QR token lookup, points earning, member purchase history, and member portal access.
+- [ ] Run an end-to-end manager workflow covering product and inventory operations, low-stock visibility, transfers, cash sessions, and location-scoped reports.
+- [ ] Record end-to-end results, defects corrected, and remaining operational prerequisites in the project documentation.
+
 - [ ] Rebuild the current managed Vite/tRPC/Drizzle/MySQL foundation into a strict Next.js, Express, Prisma, and PostgreSQL architecture while preserving the approved business requirements.
 - [ ] Configure the required PostgreSQL connection string securely and validate it through the strict-stack Prisma configuration.
 - [ ] Create the Next.js application structure with Tailwind CSS and Zustand cart state, replacing the current Vite frontend structure.

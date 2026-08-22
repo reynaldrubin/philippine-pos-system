@@ -13,6 +13,7 @@ import Overview from "./pages/Overview";
 import Register from "./pages/Register";
 import StaffLogin from "./pages/StaffLogin";
 import Transfers from "./pages/Transfers";
+import Users from "./pages/Users";
 
 function Protected({ children }: { children: React.ReactNode }) {
   const accessToken = usePosStore(state => state.accessToken);
@@ -31,6 +32,7 @@ function Router() {
       <Route path={"/transfers"}><Protected><Transfers /></Protected></Route>
       <Route path={"/members"}><Protected><Members /></Protected></Route>
       <Route path={"/operations"}><Protected><Operations /></Protected></Route>
+      <Route path={"/users"}><Protected><Users /></Protected></Route>
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

@@ -18,10 +18,12 @@ import {
   stockMovements,
   stockTransferItems,
   stockTransfers,
+  staffMenuAssignments,
   userLocations,
   users,
 } from "../drizzle/schema";
 import type { StaffRole } from "./authTokens";
+import { DEFAULT_MENU_ACCESS, RETAIL_MENU_KEYS, type RetailMenuKey } from "../shared/retailAccess";
 import { generateMemberCardToken, generateMemberNumber } from "./posRules";
 import { ENV } from "./_core/env";
 
@@ -87,7 +89,7 @@ export async function getStaffById(id: number) {
 export async function listStaffAccounts() {
   const db = await getDb();
   if (!db) return [];
-  return db.select({ id: users.id, name: users.name, email: users.email, role: users.role, isActive: users.isActive, createdAt: users.createdAt })
+  return db.select({ id: users.id, name: users.name, email: users.email, role: users.role, jobTitle: users.jobTitle, isActive: users.isActive, createdAt: users.createdAt })
     .from(users).where(ne(users.role, "user"));
 }
 
@@ -167,13 +169,42 @@ export async function updateLocation(input: {
   }).where(eq(locations.id, input.locationId));
 }
 
-export async function createStaffAccount(input: { name: string; email: string; passwordHash: string; role: StaffRole }) {
+export async function createStaffAccount(input: { name: string; email: string; passwordHash: string; role: StaffRole; jobTitle?: string }) {
   const db = await getDb();
   if (!db) throw new Error("Database is unavailable");
   const [result] = await db.insert(users).values({
-    name: input.name.trim(), email: input.email.trim().toLowerCase(), passwordHash: input.passwordHash, role: input.role, loginMethod: "password",
+    name: input.name.trim(), email: input.email.trim().toLowerCase(), passwordHash: input.passwordHash, role: input.role, jobTitle: input.jobTitle?.trim() || null, loginMethod: "password",
   });
   return Number(result.insertId);
+}
+
+export async function updateStaffAccount(input: { userId: number; name?: string; email?: string; role?: StaffRole; jobTitle?: string; isActive?: boolean }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  await db.update(users).set({
+    name: input.name?.trim(), email: input.email?.trim().toLowerCase(), role: input.role,
+    jobTitle: input.jobTitle?.trim(), isActive: input.isActive,
+  }).where(eq(users.id, input.userId));
+}
+
+export async function getStaffMenuAccess(userId: number, role: StaffRole): Promise<RetailMenuKey[]> {
+  const db = await getDb();
+  const enabled = new Set<RetailMenuKey>(DEFAULT_MENU_ACCESS[role]);
+  if (!db) return Array.from(enabled);
+  const rows = await db.select({ menuKey: staffMenuAssignments.menuKey, isEnabled: staffMenuAssignments.isEnabled })
+    .from(staffMenuAssignments).where(eq(staffMenuAssignments.userId, userId));
+  for (const row of rows) row.isEnabled ? enabled.add(row.menuKey) : enabled.delete(row.menuKey);
+  return RETAIL_MENU_KEYS.filter(menuKey => enabled.has(menuKey));
+}
+
+export async function setStaffMenuAccess(userId: number, menuKeys: RetailMenuKey[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const selected = new Set(menuKeys);
+  await db.transaction(async tx => {
+    await tx.delete(staffMenuAssignments).where(eq(staffMenuAssignments.userId, userId));
+    await tx.insert(staffMenuAssignments).values(RETAIL_MENU_KEYS.map(menuKey => ({ userId, menuKey, isEnabled: selected.has(menuKey) })));
+  });
 }
 
 export async function setStaffPasswordAndAdminRole(userId: number, passwordHash: string) {
@@ -203,7 +234,7 @@ export async function listStaffAssignmentsForLocation(locationId: number) {
   const db = await getDb();
   if (!db) return [];
   return db.select({
-    userId: users.id, name: users.name, email: users.email, role: users.role, isActive: users.isActive, isPrimary: userLocations.isPrimary,
+    userId: users.id, name: users.name, email: users.email, role: users.role, jobTitle: users.jobTitle, isActive: users.isActive, isPrimary: userLocations.isPrimary,
   }).from(userLocations).innerJoin(users, eq(userLocations.userId, users.id)).where(eq(userLocations.locationId, locationId));
 }
 

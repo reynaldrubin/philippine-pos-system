@@ -14,6 +14,7 @@ import {
 
 export const staffRoles = ["cashier", "manager", "admin"] as const;
 const persistedUserRoles = ["user", ...staffRoles] as const;
+export const staffMenuKeys = ["overview", "register", "inventory", "transfers", "members", "operations", "reports", "users"] as const;
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -23,11 +24,24 @@ export const users = mysqlTable("users", {
   passwordHash: varchar("passwordHash", { length: 255 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", persistedUserRoles).default("cashier").notNull(),
+  jobTitle: varchar("jobTitle", { length: 100 }),
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
+
+export const staffMenuAssignments = mysqlTable(
+  "staffMenuAssignments",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    menuKey: mysqlEnum("menuKey", staffMenuKeys).notNull(),
+    isEnabled: boolean("isEnabled").default(true).notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [uniqueIndex("staff_menu_assignment_unique").on(table.userId, table.menuKey)],
+);
 
 export const locations = mysqlTable(
   "locations",

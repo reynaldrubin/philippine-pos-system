@@ -30,6 +30,7 @@ import {
   getProduct,
   getStaffByEmail,
   getStaffById,
+  getStaffMenuAccess,
   getStockTransfer,
   hasLocationAccess,
   listAllLocations,
@@ -49,16 +50,19 @@ import {
   openCashSession,
   receiveStockTransfer,
   removeUserFromLocation,
+  setStaffMenuAccess,
   setLocationInventorySettings,
   setStaffPasswordAndAdminRole,
   shipStockTransfer,
   updateCategory,
   updateLocation,
+  updateStaffAccount,
   updateProduct,
   adjustLoyaltyPoints,
 } from "./db";
 import { adminStaffProcedure, managerProcedure, memberProcedure, staffProcedure } from "./posAuth";
-import { staffRoles } from "../drizzle/schema";
+import { staffMenuKeys, staffRoles } from "../drizzle/schema";
+import { defaultJobTitleForRole, roleForJobTitle } from "../shared/retailAccess";
 
 const credentialsSchema = z.object({
   identifier: z.string().trim().min(3).max(320),
@@ -77,7 +81,7 @@ const checkoutLinesSchema = z.array(z.object({ productId: z.number().int().posit
   });
 
 function staffProfile(user: NonNullable<Awaited<ReturnType<typeof getStaffById>>>) {
-  return { id: user.id, name: user.name, email: user.email, role: user.role, isActive: user.isActive };
+  return { id: user.id, name: user.name, email: user.email, role: user.role, jobTitle: user.jobTitle, isActive: user.isActive };
 }
 
 export const appRouter = router({
@@ -105,12 +109,12 @@ export const appRouter = router({
       }
       const locations = await listLocationsForUser(staff.id);
       const accessToken = await issueStaffAccessToken(staff.id, staff.role);
-      return { accessToken, user: staffProfile(staff), locations };
+      return { accessToken, user: staffProfile(staff), locations, menuKeys: await getStaffMenuAccess(staff.id, staff.role) };
     }),
     me: staffProcedure.query(async ({ ctx }) => {
       const staff = await getStaffById(ctx.staff.userId);
-      if (!staff || !staff.isActive) throw new TRPCError({ code: "UNAUTHORIZED", message: "Staff account is unavailable" });
-      return { user: staffProfile(staff), locations: await listLocationsForUser(staff.id) };
+      if (!staff || !staff.isActive || staff.role === "user") throw new TRPCError({ code: "UNAUTHORIZED", message: "Staff account is unavailable" });
+      return { user: staffProfile(staff), locations: await listLocationsForUser(staff.id), menuKeys: await getStaffMenuAccess(staff.id, staff.role) };
     }),
   }),
   memberAuth: router({
@@ -145,10 +149,23 @@ export const appRouter = router({
   staff: router({
     list: adminStaffProcedure.query(() => listStaffAccounts()),
     create: adminStaffProcedure
-      .input(z.object({ name: z.string().trim().min(2).max(160), email: z.string().email(), password: z.string().min(12).max(128), role: z.enum(staffRoles) }))
+      .input(z.object({ name: z.string().trim().min(2).max(160), email: z.string().email(), password: z.string().min(12).max(128), role: z.enum(staffRoles), jobTitle: z.string().trim().min(3).max(100).optional() }))
       .mutation(async ({ input }) => {
+        const jobTitle = input.jobTitle || defaultJobTitleForRole(input.role);
+        if (roleForJobTitle(jobTitle) !== input.role) throw new TRPCError({ code: "BAD_REQUEST", message: "The Philippine retail job title does not match the selected access role" });
         const passwordHash = await hashPassword(input.password);
-        return { userId: await createStaffAccount({ ...input, passwordHash }) };
+        return { userId: await createStaffAccount({ ...input, jobTitle, passwordHash }) };
+      }),
+    update: adminStaffProcedure
+      .input(z.object({ userId: z.number().int().positive(), name: z.string().trim().min(2).max(160).optional(), email: z.string().email().optional(), role: z.enum(staffRoles).optional(), jobTitle: z.string().trim().min(3).max(100).optional(), isActive: z.boolean().optional() }))
+      .mutation(async ({ input }) => {
+        const current = await getStaffById(input.userId);
+        if (!current || current.role === "user") throw new TRPCError({ code: "NOT_FOUND", message: "Staff account was not found" });
+        const role = input.role ?? current.role;
+        const jobTitle = input.jobTitle ?? current.jobTitle ?? defaultJobTitleForRole(role);
+        if (roleForJobTitle(jobTitle) !== role) throw new TRPCError({ code: "BAD_REQUEST", message: "The Philippine retail job title does not match the selected access role" });
+        await updateStaffAccount({ ...input, role, jobTitle });
+        return { success: true };
       }),
     assignLocation: adminStaffProcedure
       .input(z.object({ userId: z.number().int().positive(), locationId: z.number().int().positive(), isPrimary: z.boolean().optional() }))
@@ -160,6 +177,19 @@ export const appRouter = router({
       .input(z.object({ userId: z.number().int().positive(), locationId: z.number().int().positive() }))
       .mutation(async ({ input }) => {
         await removeUserFromLocation(input.userId, input.locationId);
+        return { success: true };
+      }),
+    locations: adminStaffProcedure.input(z.object({ userId: z.number().int().positive() })).query(({ input }) => listLocationsForUser(input.userId)),
+    menuAccess: adminStaffProcedure.input(z.object({ userId: z.number().int().positive() })).query(async ({ input }) => {
+      const staff = await getStaffById(input.userId);
+      if (!staff || staff.role === "user") throw new TRPCError({ code: "NOT_FOUND", message: "Staff account was not found" });
+      return { menuKeys: await getStaffMenuAccess(staff.id, staff.role) };
+    }),
+    assignMenus: adminStaffProcedure.input(z.object({ userId: z.number().int().positive(), menuKeys: z.array(z.enum(staffMenuKeys)).max(staffMenuKeys.length) }))
+      .mutation(async ({ input }) => {
+        const staff = await getStaffById(input.userId);
+        if (!staff || staff.role === "user") throw new TRPCError({ code: "NOT_FOUND", message: "Staff account was not found" });
+        await setStaffMenuAccess(input.userId, input.menuKeys);
         return { success: true };
       }),
   }),
