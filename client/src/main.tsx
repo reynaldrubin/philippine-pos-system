@@ -7,12 +7,21 @@ import superjson from "superjson";
 import App from "./App";
 import { startLogin } from "./const";
 import "./index.css";
+import { getStaffAccessToken, usePosStore } from "./stores/posStore";
 
 const queryClient = new QueryClient();
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
   if (typeof window === "undefined") return;
+
+  const hasStaffSession = Boolean(getStaffAccessToken());
+  const isStaffUnauthorized = hasStaffSession && error.data?.code === "UNAUTHORIZED";
+  if (isStaffUnauthorized) {
+    usePosStore.getState().clearSession();
+    if (window.location.pathname !== "/login") window.location.replace("/login");
+    return;
+  }
 
   const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
 
@@ -43,6 +52,8 @@ const trpcClient = trpc.createClient({
       url: "/api/trpc",
       transformer: superjson,
       headers() {
+        const staffToken = getStaffAccessToken();
+        if (staffToken) return { Authorization: `Bearer ${staffToken}` };
         // Preview auto-login fallback: when the browser blocks iframe cookies
         // (Safari ITP / private browsing / WebView), the runtime mirrors the
         // session into sessionStorage so we can forward it as a Bearer token.

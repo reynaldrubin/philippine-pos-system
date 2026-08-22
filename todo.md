@@ -1,0 +1,63 @@
+# Project TODO
+
+- [ ] Rebuild the current managed Vite/tRPC/Drizzle/MySQL foundation into a strict Next.js, Express, Prisma, and PostgreSQL architecture while preserving the approved business requirements.
+- [ ] Configure the required PostgreSQL connection string securely and validate it through the strict-stack Prisma configuration.
+- [ ] Create the Next.js application structure with Tailwind CSS and Zustand cart state, replacing the current Vite frontend structure.
+- [ ] Create a standalone Express API service with JWT staff/member authentication and Prisma database access, replacing the current tRPC data layer.
+- [ ] Recreate the completed Phase 2 locations, roles, cash-session, loyalty-member, e-card, and authorization foundations on Prisma/PostgreSQL.
+- [x] Retain the managed React/Vite, Express/tRPC, Drizzle, and managed SQL stack and resume implementation from the Phase 3 inventory domain.
+
+- [x] Define database enums and relational schema for staff roles, locations, registers, cash sessions, catalog, inventory, sales, payments, receipts, loyalty members, e-cards, loyalty accounts, and immutable point transactions.
+- [x] Extend staff authentication with Cashier, Manager, and Admin roles plus server-enforced location assignments and scoped permissions.
+- [x] Add distinct member authentication for the loyalty portal with isolated member identity and session handling.
+- [x] Implement location and staff-assignment management APIs with branch, store, warehouse, and kiosk support.
+- [x] Implement registers and opening/closing cash sessions with PHP opening cash, expected cash, counted cash, and variance fields.
+- [x] Implement loyalty-member enrollment with unique member numbers, mobile/email validation, membership status, and a unique e-card token.
+- [x] Implement e-member card generation data with a QR-compatible token tied to each member number without exposing private member data.
+- [ ] Implement loyalty account balances and an append-only point ledger for earn, reversal, and manual adjustment entries.
+- [x] Configure the default loyalty rule: award one point for every full PHP 100 of qualifying net spend after discounts and before tax.
+- [x] Enforce manager location isolation across all list, register, cash-session, and loyalty management procedures.
+- [x] Add assignment listing, assignment removal, and location update/deactivation procedures with Admin authorization.
+- [x] Add regression tests for manager location isolation and assignment-management authorization.
+- [x] Add router-level tests proving managers cannot act on unassigned locations for location, register, cash-session, and loyalty workflows.
+- [x] Add router-level tests proving only Admin can remove assignments, update locations, or view location assignments.
+- [x] Add product category CRUD, global SKU uniqueness, product status, PHP pricing, cost price, and configurable tax settings.
+- [x] Implement location-specific inventory, stock thresholds, reorder quantities, and optional location price overrides.
+- [x] Implement immutable stock movement records for receiving, sale, void, adjustment, transfer shipment, and transfer receipt.
+- [x] Implement stock-transfer request, shipment, receipt, cancellation, and authorization flows between locations.
+- [x] Implement product search and low-stock APIs scoped to authorized locations.
+- [x] Add category and product detail plus archive procedures to complete catalog CRUD without deleting historical data.
+- [x] Add category/product archive and sale/void stock-ledger regression coverage.
+- [x] Add category and product archive regression coverage using non-destructive status updates.
+- [x] Append sale and void stock movements atomically during the checkout and void phase.
+- [x] Implement cart quote calculation in PHP with server-authoritative prices, discounts, tax, and projected loyalty points.
+- [x] Implement mock payment processing for Cash, GCash, Maya, QR Ph, debit card, credit card, and bank transfer.
+- [x] Implement atomic checkout that commits the sale, payment, receipt, inventory decrement, stock movements, and loyalty point earning together.
+- [x] Implement idempotent checkout requests, insufficient-stock rejection, payment-failure handling, cash change calculation, and sale void point reversal.
+- [x] Implement digital receipts with receipt number, store details, cashier, line items, PHP totals, tax breakdown, payment data, and loyalty point details.
+- [x] Add server-side discount validation, proportional line discount allocation, total calculation, persistence, and receipt display.
+- [x] Add explicit mock non-cash payment failure paths that roll back checkout writes and create no sale, receipt, stock, or loyalty entries.
+- [x] Include cashier identity in digital receipt payloads and add receipt-content regression coverage.
+- [x] Add a checkout service-level receipt regression proving persisted receipt data includes cashier identity, totals, tax, payment, and loyalty fields.
+- [x] Add checkout transaction tests for persisted receipt content and failed non-cash payment rollback with no writes.
+- [x] Create a retail-appropriate staff dashboard visual system with responsive sidebar navigation, active-location context, PHP formatting, and role-aware navigation controls.
+- [x] Build the register workspace with product discovery, active cart, member lookup/token entry, PHP quote preview, payment controls, checkout feedback, and receipt presentation.
+- [ ] Build inventory, product/category, stock-adjustment, low-stock, transfer, location, register, cash-session, and staff-assignment management screens connected to the API.
+- [ ] Build staff loyalty-member enrollment, member profile, e-card, purchase history, and points-ledger screens.
+- [x] Build operational dashboard views for active-location revenue summary, best-selling products, low-stock alerts, and cash-session status placeholders backed by the current data model.
+- [ ] Implement staff dashboard reports for daily revenue, top-selling products, location comparison, cash-session summaries, and low-stock alerts.
+- [ ] Implement loyalty reports for member enrollment, points issued, reversal activity, and top members with authorized location filters.
+- [x] Build a role-aware staff application shell with active location selection, protected navigation, and accessible responsive layouts.
+- [x] Build register UI with product search, cart state, member lookup, QR token entry, payment selection, checkout confirmation, and receipt display.
+- [x] Clear expired or invalid staff JWT sessions and redirect safely to the staff login screen.
+- [x] Present completed and retrieved receipt details, including line items, tax, payment, cashier/member, and loyalty information.
+- [x] Render a full fetched receipt with store/register, cashier/member, product lines, quantities, discounts, tax breakdown, payment, totals, and loyalty details, including loading and error states.
+- [x] Include loyalty member number and member name in receipt payload generation, retrieval, display, and regression coverage.
+- [x] Add manager-authorized daily revenue and top-product report procedures and show their active-location results in the dashboard.
+- [ ] Add reporting API queries and replace operational dashboard metric placeholders with authorized live revenue, product, cash-session, and loyalty totals.
+- [ ] Build product, category, location inventory, stock adjustment, transfer, register, cash-session, user, and location management interfaces.
+- [ ] Build staff loyalty-member screens for enrollment, e-card display, purchase history, points ledger, and manual point adjustment.
+- [ ] Build a separate member loyalty portal with member login, PHP purchase history, balance, lifetime earnings, immutable ledger, and scannable e-card display.
+- [ ] Add Vitest coverage for permissions, location scoping, loyalty calculations, immutable ledgers, stock transfer behavior, checkout atomicity, and void reversals.
+- [ ] Run type checking, migrations, server tests, production build, browser verification, and security/error-path validation.
+- [ ] Document local setup, data model, test commands, deployment configuration, and operational workflows.

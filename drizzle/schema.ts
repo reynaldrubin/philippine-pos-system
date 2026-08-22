@@ -1,28 +1,357 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import {
+  boolean,
+  decimal,
+  index,
+  int,
+  json,
+  mysqlEnum,
+  mysqlTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  varchar,
+} from "drizzle-orm/mysql-core";
 
-/**
- * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
- */
+export const staffRoles = ["cashier", "manager", "admin"] as const;
+const persistedUserRoles = ["user", ...staffRoles] as const;
+
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
-  name: text("name"),
-  email: varchar("email", { length: 320 }),
+  openId: varchar("openId", { length: 64 }).unique(),
+  name: varchar("name", { length: 160 }),
+  email: varchar("email", { length: 320 }).unique(),
+  passwordHash: varchar("passwordHash", { length: 255 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  role: mysqlEnum("role", persistedUserRoles).default("cashier").notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
+export const locations = mysqlTable(
+  "locations",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    code: varchar("code", { length: 32 }).notNull().unique(),
+    name: varchar("name", { length: 160 }).notNull(),
+    type: mysqlEnum("type", ["store", "branch", "warehouse", "kiosk"]).default("store").notNull(),
+    address: text("address"),
+    city: varchar("city", { length: 120 }),
+    province: varchar("province", { length: 120 }),
+    postalCode: varchar("postalCode", { length: 20 }),
+    phone: varchar("phone", { length: 40 }),
+    isActive: boolean("isActive").default(true).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("locations_active_idx").on(table.isActive)],
+);
+
+export const userLocations = mysqlTable(
+  "userLocations",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    locationId: int("locationId").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    isPrimary: boolean("isPrimary").default(false).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [
+    uniqueIndex("user_locations_unique").on(table.userId, table.locationId),
+    index("user_locations_location_idx").on(table.locationId),
+  ],
+);
+
+export const registers = mysqlTable(
+  "registers",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    locationId: int("locationId").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    code: varchar("code", { length: 40 }).notNull(),
+    name: varchar("name", { length: 120 }).notNull(),
+    isActive: boolean("isActive").default(true).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [uniqueIndex("register_location_code_unique").on(table.locationId, table.code)],
+);
+
+export const cashSessions = mysqlTable(
+  "cashSessions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    registerId: int("registerId").notNull().references(() => registers.id, { onDelete: "restrict" }),
+    openedById: int("openedById").notNull().references(() => users.id, { onDelete: "restrict" }),
+    closedById: int("closedById").references(() => users.id, { onDelete: "restrict" }),
+    status: mysqlEnum("status", ["open", "closed"]).default("open").notNull(),
+    openingCash: decimal("openingCash", { precision: 14, scale: 2 }).notNull(),
+    expectedCash: decimal("expectedCash", { precision: 14, scale: 2 }).default("0").notNull(),
+    closingCash: decimal("closingCash", { precision: 14, scale: 2 }),
+    variance: decimal("variance", { precision: 14, scale: 2 }),
+    openedAt: timestamp("openedAt").defaultNow().notNull(),
+    closedAt: timestamp("closedAt"),
+  },
+  table => [index("cash_sessions_register_status_idx").on(table.registerId, table.status)],
+);
+
+export const categories = mysqlTable("categories", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 120 }).notNull().unique(),
+  description: text("description"),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const products = mysqlTable(
+  "products",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    sku: varchar("sku", { length: 80 }).notNull().unique(),
+    name: varchar("name", { length: 180 }).notNull(),
+    description: text("description"),
+    categoryId: int("categoryId").references(() => categories.id, { onDelete: "set null" }),
+    price: decimal("price", { precision: 14, scale: 2 }).notNull(),
+    costPrice: decimal("costPrice", { precision: 14, scale: 2 }).default("0").notNull(),
+    taxRate: decimal("taxRate", { precision: 6, scale: 4 }).default("0.12").notNull(),
+    isTaxInclusive: boolean("isTaxInclusive").default(false).notNull(),
+    isActive: boolean("isActive").default(true).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("products_category_active_idx").on(table.categoryId, table.isActive)],
+);
+
+export const locationInventory = mysqlTable(
+  "locationInventory",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    locationId: int("locationId").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    productId: int("productId").notNull().references(() => products.id, { onDelete: "cascade" }),
+    quantity: decimal("quantity", { precision: 14, scale: 3 }).default("0").notNull(),
+    reservedQuantity: decimal("reservedQuantity", { precision: 14, scale: 3 }).default("0").notNull(),
+    lowStockThreshold: decimal("lowStockThreshold", { precision: 14, scale: 3 }).default("0").notNull(),
+    reorderQuantity: decimal("reorderQuantity", { precision: 14, scale: 3 }).default("0").notNull(),
+    priceOverride: decimal("priceOverride", { precision: 14, scale: 2 }),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    uniqueIndex("location_inventory_unique").on(table.locationId, table.productId),
+    index("location_inventory_low_stock_idx").on(table.locationId, table.quantity, table.lowStockThreshold),
+  ],
+);
+
+export const loyaltyMembers = mysqlTable(
+  "loyaltyMembers",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    memberNumber: varchar("memberNumber", { length: 48 }).notNull().unique(),
+    firstName: varchar("firstName", { length: 100 }).notNull(),
+    lastName: varchar("lastName", { length: 100 }).notNull(),
+    mobile: varchar("mobile", { length: 32 }).notNull().unique(),
+    email: varchar("email", { length: 320 }).unique(),
+    passwordHash: varchar("passwordHash", { length: 255 }).notNull(),
+    status: mysqlEnum("status", ["active", "suspended", "closed"]).default("active").notNull(),
+    joinedLocationId: int("joinedLocationId").references(() => locations.id, { onDelete: "set null" }),
+    joinedAt: timestamp("joinedAt").defaultNow().notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("loyalty_members_name_idx").on(table.lastName, table.firstName)],
+);
+
+export const loyaltyCards = mysqlTable(
+  "loyaltyCards",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    memberId: int("memberId").notNull().references(() => loyaltyMembers.id, { onDelete: "cascade" }),
+    cardNumber: varchar("cardNumber", { length: 48 }).notNull().unique(),
+    displayToken: varchar("displayToken", { length: 128 }).notNull().unique(),
+    cardType: mysqlEnum("cardType", ["digital"]).default("digital").notNull(),
+    status: mysqlEnum("status", ["active", "revoked", "expired"]).default("active").notNull(),
+    issuedAt: timestamp("issuedAt").defaultNow().notNull(),
+    expiresAt: timestamp("expiresAt"),
+  },
+  table => [index("loyalty_cards_member_status_idx").on(table.memberId, table.status)],
+);
+
+export const loyaltyAccounts = mysqlTable("loyaltyAccounts", {
+  id: int("id").autoincrement().primaryKey(),
+  memberId: int("memberId").notNull().references(() => loyaltyMembers.id, { onDelete: "cascade" }).unique(),
+  currentPoints: int("currentPoints").default(0).notNull(),
+  lifetimeEarned: int("lifetimeEarned").default(0).notNull(),
+  lifetimeRedeemed: int("lifetimeRedeemed").default(0).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const stockTransfers = mysqlTable(
+  "stockTransfers",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    transferNumber: varchar("transferNumber", { length: 48 }).notNull().unique(),
+    sourceLocationId: int("sourceLocationId").notNull().references(() => locations.id, { onDelete: "restrict" }),
+    destinationLocationId: int("destinationLocationId").notNull().references(() => locations.id, { onDelete: "restrict" }),
+    status: mysqlEnum("status", ["requested", "shipped", "received", "cancelled"]).default("requested").notNull(),
+    requestedById: int("requestedById").notNull().references(() => users.id, { onDelete: "restrict" }),
+    shippedById: int("shippedById").references(() => users.id, { onDelete: "restrict" }),
+    receivedById: int("receivedById").references(() => users.id, { onDelete: "restrict" }),
+    note: text("note"),
+    requestedAt: timestamp("requestedAt").defaultNow().notNull(),
+    shippedAt: timestamp("shippedAt"),
+    receivedAt: timestamp("receivedAt"),
+  },
+  table => [index("stock_transfers_locations_status_idx").on(table.sourceLocationId, table.destinationLocationId, table.status)],
+);
+
+export const stockTransferItems = mysqlTable(
+  "stockTransferItems",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    transferId: int("transferId").notNull().references(() => stockTransfers.id, { onDelete: "cascade" }),
+    productId: int("productId").notNull().references(() => products.id, { onDelete: "restrict" }),
+    quantityRequested: decimal("quantityRequested", { precision: 14, scale: 3 }).notNull(),
+    quantityShipped: decimal("quantityShipped", { precision: 14, scale: 3 }).default("0").notNull(),
+    quantityReceived: decimal("quantityReceived", { precision: 14, scale: 3 }).default("0").notNull(),
+  },
+  table => [uniqueIndex("stock_transfer_product_unique").on(table.transferId, table.productId)],
+);
+
+export const sales = mysqlTable(
+  "sales",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    receiptNumber: varchar("receiptNumber", { length: 48 }).notNull().unique(),
+    locationId: int("locationId").notNull().references(() => locations.id, { onDelete: "restrict" }),
+    registerId: int("registerId").references(() => registers.id, { onDelete: "set null" }),
+    cashSessionId: int("cashSessionId").references(() => cashSessions.id, { onDelete: "set null" }),
+    cashierId: int("cashierId").notNull().references(() => users.id, { onDelete: "restrict" }),
+    memberId: int("memberId").references(() => loyaltyMembers.id, { onDelete: "set null" }),
+    status: mysqlEnum("status", ["completed", "voided"]).default("completed").notNull(),
+    subtotal: decimal("subtotal", { precision: 14, scale: 2 }).notNull(),
+    taxAmount: decimal("taxAmount", { precision: 14, scale: 2 }).default("0").notNull(),
+    discountAmount: decimal("discountAmount", { precision: 14, scale: 2 }).default("0").notNull(),
+    totalAmount: decimal("totalAmount", { precision: 14, scale: 2 }).notNull(),
+    qualifyingAmount: decimal("qualifyingAmount", { precision: 14, scale: 2 }).default("0").notNull(),
+    pointsEarned: int("pointsEarned").default(0).notNull(),
+    idempotencyKey: varchar("idempotencyKey", { length: 128 }).notNull().unique(),
+    voidedById: int("voidedById").references(() => users.id, { onDelete: "restrict" }),
+    voidedAt: timestamp("voidedAt"),
+    voidReason: text("voidReason"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [
+    index("sales_location_created_idx").on(table.locationId, table.createdAt),
+    index("sales_member_created_idx").on(table.memberId, table.createdAt),
+  ],
+);
+
+export const saleItems = mysqlTable(
+  "saleItems",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    saleId: int("saleId").notNull().references(() => sales.id, { onDelete: "cascade" }),
+    productId: int("productId").references(() => products.id, { onDelete: "set null" }),
+    skuSnapshot: varchar("skuSnapshot", { length: 80 }).notNull(),
+    nameSnapshot: varchar("nameSnapshot", { length: 180 }).notNull(),
+    unitPrice: decimal("unitPrice", { precision: 14, scale: 2 }).notNull(),
+    quantity: decimal("quantity", { precision: 14, scale: 3 }).notNull(),
+    taxRate: decimal("taxRate", { precision: 6, scale: 4 }).default("0").notNull(),
+    taxAmount: decimal("taxAmount", { precision: 14, scale: 2 }).default("0").notNull(),
+    lineTotal: decimal("lineTotal", { precision: 14, scale: 2 }).notNull(),
+  },
+  table => [index("sale_items_sale_idx").on(table.saleId)],
+);
+
+export const payments = mysqlTable(
+  "payments",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    saleId: int("saleId").notNull().references(() => sales.id, { onDelete: "cascade" }),
+    locationId: int("locationId").notNull().references(() => locations.id, { onDelete: "restrict" }),
+    method: mysqlEnum("method", ["cash", "gcash", "maya", "qrph", "debit_card", "credit_card", "bank_transfer"]).notNull(),
+    provider: varchar("provider", { length: 64 }).default("mock").notNull(),
+    status: mysqlEnum("status", ["authorized", "paid", "failed", "cancelled", "refunded"]).default("authorized").notNull(),
+    amount: decimal("amount", { precision: 14, scale: 2 }).notNull(),
+    amountTendered: decimal("amountTendered", { precision: 14, scale: 2 }),
+    changeAmount: decimal("changeAmount", { precision: 14, scale: 2 }).default("0").notNull(),
+    reference: varchar("reference", { length: 120 }),
+    metadata: json("metadata"),
+    processedAt: timestamp("processedAt").defaultNow().notNull(),
+  },
+  table => [index("payments_sale_idx").on(table.saleId)],
+);
+
+export const receipts = mysqlTable("receipts", {
+  id: int("id").autoincrement().primaryKey(),
+  saleId: int("saleId").notNull().references(() => sales.id, { onDelete: "cascade" }).unique(),
+  receiptNumber: varchar("receiptNumber", { length: 48 }).notNull().unique(),
+  format: mysqlEnum("format", ["digital"]).default("digital").notNull(),
+  content: json("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const stockMovements = mysqlTable(
+  "stockMovements",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    locationId: int("locationId").notNull().references(() => locations.id, { onDelete: "restrict" }),
+    productId: int("productId").notNull().references(() => products.id, { onDelete: "restrict" }),
+    quantityDelta: decimal("quantityDelta", { precision: 14, scale: 3 }).notNull(),
+    movementType: mysqlEnum("movementType", ["receiving", "sale", "void", "adjustment", "transfer_shipment", "transfer_receipt"]).notNull(),
+    referenceType: varchar("referenceType", { length: 64 }),
+    referenceId: int("referenceId"),
+    note: text("note"),
+    createdById: int("createdById").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [index("stock_movements_location_product_idx").on(table.locationId, table.productId, table.createdAt)],
+);
+
+export const loyaltyTransactions = mysqlTable(
+  "loyaltyTransactions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    memberId: int("memberId").notNull().references(() => loyaltyMembers.id, { onDelete: "restrict" }),
+    accountId: int("accountId").notNull().references(() => loyaltyAccounts.id, { onDelete: "restrict" }),
+    type: mysqlEnum("type", ["earn", "reversal", "adjustment", "redeem"]).notNull(),
+    points: int("points").notNull(),
+    balanceAfter: int("balanceAfter").notNull(),
+    saleId: int("saleId").references(() => sales.id, { onDelete: "restrict" }),
+    locationId: int("locationId").references(() => locations.id, { onDelete: "set null" }),
+    referenceId: varchar("referenceId", { length: 96 }),
+    note: text("note"),
+    createdById: int("createdById").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [
+    index("loyalty_transactions_member_created_idx").on(table.memberId, table.createdAt),
+    index("loyalty_transactions_sale_idx").on(table.saleId),
+  ],
+);
+
+export const auditLogs = mysqlTable(
+  "auditLogs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").references(() => users.id, { onDelete: "set null" }),
+    locationId: int("locationId").references(() => locations.id, { onDelete: "set null" }),
+    action: varchar("action", { length: 120 }).notNull(),
+    entityType: varchar("entityType", { length: 80 }).notNull(),
+    entityId: varchar("entityId", { length: 80 }),
+    metadata: json("metadata"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [index("audit_logs_entity_idx").on(table.entityType, table.entityId, table.createdAt)],
+);
+
+export const systemSettings = mysqlTable("systemSettings", {
+  id: int("id").autoincrement().primaryKey(),
+  key: varchar("key", { length: 100 }).notNull().unique(),
+  value: json("value").notNull(),
+  updatedById: int("updatedById").references(() => users.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
-
-// TODO: Add your tables here
