@@ -1,4 +1,4 @@
-import { and, eq, gte, like, lte, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, like, lte, ne, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
@@ -8,6 +8,7 @@ import {
   loyaltyAccounts,
   loyaltyCards,
   loyaltyMembers,
+  loyaltyTransactions,
   locations,
   products,
   registers,
@@ -557,6 +558,47 @@ export async function getLoyaltyAccountByMemberId(memberId: number) {
   if (!db) return undefined;
   const result = await db.select().from(loyaltyAccounts).where(eq(loyaltyAccounts.memberId, memberId)).limit(1);
   return result[0];
+}
+
+export async function getLoyaltyMemberDetail(memberId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select({
+    id: loyaltyMembers.id, memberNumber: loyaltyMembers.memberNumber, firstName: loyaltyMembers.firstName, lastName: loyaltyMembers.lastName,
+    mobile: loyaltyMembers.mobile, email: loyaltyMembers.email, status: loyaltyMembers.status, joinedAt: loyaltyMembers.joinedAt,
+    currentPoints: loyaltyAccounts.currentPoints, lifetimeEarned: loyaltyAccounts.lifetimeEarned, lifetimeRedeemed: loyaltyAccounts.lifetimeRedeemed,
+    cardNumber: loyaltyCards.cardNumber, displayToken: loyaltyCards.displayToken, cardStatus: loyaltyCards.status,
+  }).from(loyaltyMembers).leftJoin(loyaltyAccounts, eq(loyaltyAccounts.memberId, loyaltyMembers.id)).leftJoin(loyaltyCards, eq(loyaltyCards.memberId, loyaltyMembers.id))
+    .where(eq(loyaltyMembers.id, memberId)).limit(1);
+  return result[0];
+}
+
+export async function listMemberPurchases(memberId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ id: sales.id, receiptNumber: sales.receiptNumber, locationId: sales.locationId, totalAmount: sales.totalAmount, pointsEarned: sales.pointsEarned, status: sales.status, createdAt: sales.createdAt })
+    .from(sales).where(eq(sales.memberId, memberId)).orderBy(desc(sales.createdAt)).limit(30);
+}
+
+export async function listMemberPointTransactions(memberId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ id: loyaltyTransactions.id, type: loyaltyTransactions.type, points: loyaltyTransactions.points, balanceAfter: loyaltyTransactions.balanceAfter, saleId: loyaltyTransactions.saleId, locationId: loyaltyTransactions.locationId, note: loyaltyTransactions.note, createdAt: loyaltyTransactions.createdAt })
+    .from(loyaltyTransactions).where(eq(loyaltyTransactions.memberId, memberId)).orderBy(desc(loyaltyTransactions.createdAt)).limit(50);
+}
+
+export async function adjustLoyaltyPoints(input: { memberId: number; points: number; note: string; createdById: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  return db.transaction(async tx => {
+    const account = await tx.select().from(loyaltyAccounts).where(eq(loyaltyAccounts.memberId, input.memberId)).limit(1);
+    if (!account[0]) throw new Error("Loyalty account was not found");
+    const balanceAfter = account[0].currentPoints + input.points;
+    if (balanceAfter < 0) throw new Error("Point adjustment cannot create a negative balance");
+    await tx.update(loyaltyAccounts).set({ currentPoints: balanceAfter }).where(eq(loyaltyAccounts.id, account[0].id));
+    await tx.insert(loyaltyTransactions).values({ memberId: input.memberId, accountId: account[0].id, type: "adjustment", points: input.points, balanceAfter, note: input.note.trim(), createdById: input.createdById });
+    return balanceAfter;
+  });
 }
 
 type CreateLoyaltyMemberInput = {

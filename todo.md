@@ -14,7 +14,7 @@
 - [x] Implement registers and opening/closing cash sessions with PHP opening cash, expected cash, counted cash, and variance fields.
 - [x] Implement loyalty-member enrollment with unique member numbers, mobile/email validation, membership status, and a unique e-card token.
 - [x] Implement e-member card generation data with a QR-compatible token tied to each member number without exposing private member data.
-- [ ] Implement loyalty account balances and an append-only point ledger for earn, reversal, and manual adjustment entries.
+- [x] Implement loyalty account balances and an append-only point ledger for earn, reversal, and manual adjustment entries.
 - [x] Configure the default loyalty rule: award one point for every full PHP 100 of qualifying net spend after discounts and before tax.
 - [x] Enforce manager location isolation across all list, register, cash-session, and loyalty management procedures.
 - [x] Add assignment listing, assignment removal, and location update/deactivation procedures with Admin authorization.
@@ -56,7 +56,11 @@
 - [x] Add manager-authorized daily revenue and top-product report procedures and show their active-location results in the dashboard.
 - [ ] Add reporting API queries and replace operational dashboard metric placeholders with authorized live revenue, product, cash-session, and loyalty totals.
 - [ ] Build product, category, location inventory, stock adjustment, transfer, register, cash-session, user, and location management interfaces.
-- [ ] Build staff loyalty-member screens for enrollment, e-card display, purchase history, points ledger, and manual point adjustment.
+- [x] Build staff loyalty-member screens for enrollment, e-card display, purchase history, points ledger, and manual point adjustment.
+- [x] Add loading, error, empty, success, and failure states to staff loyalty member activity and manual adjustment workflows.
+- [ ] Add regression coverage for append-only manual point adjustments, balance updates, and member activity responses.
+- [ ] Surface member contact, status, joined date, and lifetime point totals in the staff profile panel.
+- [ ] Add service or route coverage for loyalty detail, purchase history, point history, and append-only adjustment balance updates.
 - [ ] Build a separate member loyalty portal with member login, PHP purchase history, balance, lifetime earnings, immutable ledger, and scannable e-card display.
 - [ ] Add Vitest coverage for permissions, location scoping, loyalty calculations, immutable ledgers, stock transfer behavior, checkout atomicity, and void reversals.
 - [ ] Run type checking, migrations, server tests, production build, browser verification, and security/error-path validation.

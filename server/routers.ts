@@ -23,6 +23,7 @@ import {
   getLoyaltyAccountByMemberId,
   getLoyaltyMemberById,
   getLoyaltyMemberByIdentifier,
+  getLoyaltyMemberDetail,
   getLocationDashboardReport,
   lookupLoyaltyMemberForStaff,
   getRegisterAtLocation,
@@ -35,6 +36,8 @@ import {
   listCategories,
   listInventoryForLocation,
   listLocationsForUser,
+  listMemberPointTransactions,
+  listMemberPurchases,
   listOpenCashSessionsForLocation,
   listLowStockForLocation,
   listProducts,
@@ -52,6 +55,7 @@ import {
   updateCategory,
   updateLocation,
   updateProduct,
+  adjustLoyaltyPoints,
 } from "./db";
 import { adminStaffProcedure, managerProcedure, memberProcedure, staffProcedure } from "./posAuth";
 import { staffRoles } from "../drizzle/schema";
@@ -386,12 +390,20 @@ export const appRouter = router({
         const passwordHash = await hashPassword(input.password);
         return createLoyaltyMember({ ...input, passwordHash });
       }),
+    detail: staffProcedure.input(z.object({ memberId: z.number().int().positive() })).query(({ input }) => getLoyaltyMemberDetail(input.memberId)),
+    purchases: staffProcedure.input(z.object({ memberId: z.number().int().positive() })).query(({ input }) => listMemberPurchases(input.memberId)),
+    pointTransactions: staffProcedure.input(z.object({ memberId: z.number().int().positive() })).query(({ input }) => listMemberPointTransactions(input.memberId)),
+    adjustPoints: managerProcedure.input(z.object({ memberId: z.number().int().positive(), points: z.number().int().refine(value => value !== 0), note: z.string().trim().min(3).max(240) }))
+      .mutation(({ ctx, input }) => adjustLoyaltyPoints({ ...input, createdById: ctx.staff.userId })),
     myPortalSummary: memberProcedure.query(async ({ ctx }) => {
       const member = await getLoyaltyMemberById(ctx.member.memberId);
       const account = await getLoyaltyAccountByMemberId(ctx.member.memberId);
       if (!member || !account) throw new TRPCError({ code: "NOT_FOUND", message: "Loyalty account was not found" });
       return { member, account };
     }),
+    myPortalPurchases: memberProcedure.query(({ ctx }) => listMemberPurchases(ctx.member.memberId)),
+    myPortalPoints: memberProcedure.query(({ ctx }) => listMemberPointTransactions(ctx.member.memberId)),
+    myPortalCard: memberProcedure.query(({ ctx }) => getLoyaltyMemberDetail(ctx.member.memberId)),
   }),
 });
 
