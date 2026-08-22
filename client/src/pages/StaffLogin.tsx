@@ -2,8 +2,9 @@ import { trpc } from "@/lib/trpc";
 import { STAFF_ACCESS_TOKEN_KEY, StaffRole, usePosStore } from "@/stores/posStore";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
+import { getOwnerBootstrapUiState } from "@/lib/ownerBootstrapUi";
 import { ArrowRight, LockKeyhole, Store } from "lucide-react";
-import { FormEvent, useState } from "react";
+import React, { FormEvent, useState } from "react";
 import { useLocation } from "wouter";
 
 export default function StaffLogin() {
@@ -20,6 +21,7 @@ export default function StaffLogin() {
     setLocation("/");
   } });
   const bootstrap = trpc.bootstrap.establishAdminPassword.useMutation({ onSuccess: result => { sessionStorage.setItem(STAFF_ACCESS_TOKEN_KEY, result.accessToken); window.location.reload(); } });
+  const ownerBootstrapUiState = getOwnerBootstrapUiState({ isLoading: bootstrapStatus.isLoading, initialized: bootstrapStatus.data?.initialized, isOwnerAuthenticated: isAuthenticated });
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -40,7 +42,7 @@ export default function StaffLogin() {
       {login.error && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{login.error.message}</p>}
       <button disabled={login.isPending} className="mt-7 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#17352e] text-sm font-semibold text-white transition hover:bg-[#25463d] disabled:opacity-60">{login.isPending ? "Signing in…" : "Sign in to workspace"}<ArrowRight className="h-4 w-4" /></button>
       <p className="mt-6 flex items-center justify-center gap-2 text-xs text-[#74827b]"><LockKeyhole className="h-3.5 w-3.5" /> Secure staff access</p>
-      <div className="mt-6 border-t border-[#e3e9e3] pt-5"><p className="text-xs font-semibold text-[#52655b]">First-time project owner?</p>{bootstrapStatus.isLoading ? <p className="mt-2 text-xs text-[#74827b]">Checking Admin setup…</p> : bootstrapStatus.data?.initialized ? <p className="mt-2 text-xs leading-5 text-[#52655b]">An Admin account is already initialized. Sign in above with the configured staff email and password.</p> : isAuthenticated ? <div className="mt-3 flex gap-2"><input type="password" value={adminPassword} onChange={event => setAdminPassword(event.target.value)} className="h-9 min-w-0 flex-1 rounded-lg border border-[#d6ded7] px-2 text-xs" placeholder="Set 12+ character Admin password" /><button type="button" disabled={adminPassword.length < 12 || bootstrap.isPending} onClick={() => bootstrap.mutate({ password: adminPassword })} className="rounded-lg border border-[#2f644e] px-3 text-xs font-semibold text-[#24513f]">Initialize</button></div> : <button type="button" onClick={() => startLogin()} className="mt-2 text-xs font-semibold text-[#2c654f] underline underline-offset-4">Sign in as project owner to initialize Admin</button>}{bootstrap.error && <p className="mt-2 text-xs text-red-700">{bootstrap.error.message}</p>}</div>
+      <div className="mt-6 border-t border-[#e3e9e3] pt-5"><p className="text-xs font-semibold text-[#52655b]">First-time project owner?</p>{ownerBootstrapUiState === "checking" ? <p className="mt-2 text-xs text-[#74827b]">Checking Admin setup…</p> : ownerBootstrapUiState === "initialized" ? <p className="mt-2 text-xs leading-5 text-[#52655b]">An Admin account is already initialized. Sign in above with the configured staff email and password.</p> : ownerBootstrapUiState === "set-admin-password" ? <div className="mt-3 flex gap-2"><input type="password" value={adminPassword} onChange={event => setAdminPassword(event.target.value)} className="h-9 min-w-0 flex-1 rounded-lg border border-[#d6ded7] px-2 text-xs" placeholder="Set 12+ character Admin password" /><button type="button" disabled={adminPassword.length < 12 || bootstrap.isPending} onClick={() => bootstrap.mutate({ password: adminPassword })} className="rounded-lg border border-[#2f644e] px-3 text-xs font-semibold text-[#24513f]">Initialize</button></div> : <button type="button" onClick={() => startLogin()} className="mt-2 text-xs font-semibold text-[#2c654f] underline underline-offset-4">Sign in as project owner to initialize Admin</button>}{bootstrap.error && <p className="mt-2 text-xs text-red-700">{bootstrap.error.message}</p>}</div>
     </form></section>
   </div>;
 }

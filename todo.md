@@ -3,8 +3,8 @@
 - [x] Fix the owner bootstrap flow so authenticated project owners can initialize the first Admin account and do not remain stuck on the repeated owner sign-in prompt.
 - [x] Add regression coverage for owner bootstrap readiness, successful Admin initialization, and post-bootstrap staff login state.
 - [x] Add owner-bootstrap procedure coverage for Admin password initialization and post-bootstrap staff token issuance.
-- [ ] Verify the uninitialized owner-bootstrap UI path and the resulting staff login flow in a controlled browser or integration test.
-- [ ] Add focused interface coverage for the uninitialized owner-bootstrap state, initialization submission, and transition to a staff session.
+- [x] Verify the uninitialized owner-bootstrap UI path and the resulting staff login flow in a controlled browser or integration test.
+- [x] Add focused interface coverage for the uninitialized owner-bootstrap state, initialization submission, and transition to a staff session.
 
 - [x] Add Philippine retail staff hierarchy metadata that maps Head Office/Owner, Operations or Area Manager, Branch or Store Manager, Supervisor, Cashier, and Sales Associate job titles to the existing Admin, Manager, and Cashier authorization roles.
 - [x] Implement Admin user management for creating, activating/deactivating, and updating staff accounts with job title and role validation.
@@ -90,7 +90,7 @@
 - [x] Add service or route coverage for loyalty detail, purchase history, point history, and append-only adjustment balance updates.
 - [x] Build a separate member loyalty portal with member login, PHP purchase history, balance, lifetime earnings, immutable ledger, and scannable e-card display.
 - [x] Add isolated member JWT persistence, route-aware API authorization, and safe member-session logout behavior for the loyalty portal.
-- [ ] Verify authenticated member login, dashboard loading, logout, and session-token clearing in the portal.
+- [x] Verify authenticated member login, dashboard loading, logout, and session-token clearing in the portal.
 - [x] Add Vitest coverage for permissions, location scoping, loyalty calculations, immutable ledgers, stock transfer behavior, checkout atomicity, and void reversals.
 - [x] Add stock-transfer lifecycle coverage for request, ship, receive, cancellation, inventory changes, and immutable stock movements.
 - [x] Add completed-sale void coverage for stock restoration and loyalty reversal ledger effects.

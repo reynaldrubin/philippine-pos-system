@@ -2,7 +2,7 @@ import { trpc } from "@/lib/trpc";
 import { MEMBER_ACCESS_TOKEN_KEY, useMemberPortalStore } from "@/stores/memberPortalStore";
 import { Award, ChevronRight, CircleDollarSign, Clock3, LogOut, QrCode, ReceiptText, ShieldCheck, Sparkles } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import React, { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 
 const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
