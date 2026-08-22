@@ -534,15 +534,16 @@ export async function createStockTransfer(input: {
   if (input.sourceLocationId === input.destinationLocationId) throw new Error("Source and destination locations must be different");
   const db = await getDb();
   if (!db) throw new Error("Database is unavailable");
-  return db.transaction(async tx => {
-    const [transfer] = await tx.insert(stockTransfers).values({
-      transferNumber: input.transferNumber, sourceLocationId: input.sourceLocationId, destinationLocationId: input.destinationLocationId,
-      requestedById: input.requestedById, note: input.note?.trim() || null,
-    });
-    const transferId = Number(transfer.insertId);
-    await tx.insert(stockTransferItems).values(input.items.map(item => ({ transferId, productId: item.productId, quantityRequested: item.quantityRequested })));
-    return transferId;
-  });
+  return db.transaction(tx => applyStockTransferRequestInTransaction(tx, input));
+}
+
+export async function applyStockTransferRequestInTransaction(tx: any, input: { transferNumber: string; sourceLocationId: number; destinationLocationId: number; requestedById: number; note?: string; items: Array<{ productId: number; quantityRequested: string }> }) {
+  if (input.sourceLocationId === input.destinationLocationId) throw new Error("Source and destination locations must be different");
+  if (!input.items.length) throw new Error("At least one transfer item is required");
+  const [transfer] = await tx.insert(stockTransfers).values({ transferNumber: input.transferNumber, sourceLocationId: input.sourceLocationId, destinationLocationId: input.destinationLocationId, requestedById: input.requestedById, note: input.note?.trim() || null });
+  const transferId = Number(transfer.insertId);
+  await tx.insert(stockTransferItems).values(input.items.map(item => ({ transferId, productId: item.productId, quantityRequested: item.quantityRequested })));
+  return transferId;
 }
 
 export async function getStockTransfer(transferId: number) {
@@ -563,25 +564,37 @@ export async function listStockTransfersForLocation(locationId: number) {
   return db.select().from(stockTransfers).where(or(eq(stockTransfers.sourceLocationId, locationId), eq(stockTransfers.destinationLocationId, locationId)));
 }
 
+export async function applyStockTransferShipmentInTransaction(tx: any, transfer: any, items: any[], transferId: number, shippedById: number) {
+  if (!transfer || transfer.status !== "requested") throw new Error("Only requested transfers can be shipped");
+  for (const item of items) {
+    const [result] = await tx.update(locationInventory).set({ quantity: sql`${locationInventory.quantity} - ${item.quantityRequested}` })
+      .where(and(eq(locationInventory.locationId, transfer.sourceLocationId), eq(locationInventory.productId, item.productId), gte(locationInventory.quantity, item.quantityRequested)));
+    if (Number(result.affectedRows) !== 1) throw new Error("Insufficient source inventory to ship this transfer");
+    await tx.update(stockTransferItems).set({ quantityShipped: item.quantityRequested }).where(eq(stockTransferItems.id, item.id));
+    await tx.insert(stockMovements).values({ locationId: transfer.sourceLocationId, productId: item.productId, quantityDelta: `-${item.quantityRequested}`, movementType: "transfer_shipment", referenceType: "stock_transfer", referenceId: transferId, createdById: shippedById });
+  }
+  await tx.update(stockTransfers).set({ status: "shipped", shippedById, shippedAt: new Date() }).where(eq(stockTransfers.id, transferId));
+}
+
 export async function shipStockTransfer(transferId: number, shippedById: number) {
   const db = await getDb();
   if (!db) throw new Error("Database is unavailable");
   return db.transaction(async tx => {
     const [transfer] = await tx.select().from(stockTransfers).where(eq(stockTransfers.id, transferId)).limit(1);
-    if (!transfer || transfer.status !== "requested") throw new Error("Only requested transfers can be shipped");
     const items = await tx.select().from(stockTransferItems).where(eq(stockTransferItems.transferId, transferId));
-    for (const item of items) {
-      const [result] = await tx.update(locationInventory).set({ quantity: sql`${locationInventory.quantity} - ${item.quantityRequested}` })
-        .where(and(eq(locationInventory.locationId, transfer.sourceLocationId), eq(locationInventory.productId, item.productId), gte(locationInventory.quantity, item.quantityRequested)));
-      if (Number(result.affectedRows) !== 1) throw new Error("Insufficient source inventory to ship this transfer");
-      await tx.update(stockTransferItems).set({ quantityShipped: item.quantityRequested }).where(eq(stockTransferItems.id, item.id));
-      await tx.insert(stockMovements).values({
-        locationId: transfer.sourceLocationId, productId: item.productId, quantityDelta: `-${item.quantityRequested}`, movementType: "transfer_shipment",
-        referenceType: "stock_transfer", referenceId: transferId, createdById: shippedById,
-      });
-    }
-    await tx.update(stockTransfers).set({ status: "shipped", shippedById, shippedAt: new Date() }).where(eq(stockTransfers.id, transferId));
+    return applyStockTransferShipmentInTransaction(tx, transfer, items, transferId, shippedById);
   });
+}
+
+export async function applyStockTransferReceiptInTransaction(tx: any, transfer: any, items: any[], transferId: number, receivedById: number) {
+  if (!transfer || transfer.status !== "shipped") throw new Error("Only shipped transfers can be received");
+  for (const item of items) {
+    await tx.insert(locationInventory).values({ locationId: transfer.destinationLocationId, productId: item.productId, quantity: item.quantityShipped })
+      .onDuplicateKeyUpdate({ set: { quantity: sql`${locationInventory.quantity} + ${item.quantityShipped}` } });
+    await tx.update(stockTransferItems).set({ quantityReceived: item.quantityShipped }).where(eq(stockTransferItems.id, item.id));
+    await tx.insert(stockMovements).values({ locationId: transfer.destinationLocationId, productId: item.productId, quantityDelta: item.quantityShipped, movementType: "transfer_receipt", referenceType: "stock_transfer", referenceId: transferId, createdById: receivedById });
+  }
+  await tx.update(stockTransfers).set({ status: "received", receivedById, receivedAt: new Date() }).where(eq(stockTransfers.id, transferId));
 }
 
 export async function receiveStockTransfer(transferId: number, receivedById: number) {
@@ -589,26 +602,20 @@ export async function receiveStockTransfer(transferId: number, receivedById: num
   if (!db) throw new Error("Database is unavailable");
   return db.transaction(async tx => {
     const [transfer] = await tx.select().from(stockTransfers).where(eq(stockTransfers.id, transferId)).limit(1);
-    if (!transfer || transfer.status !== "shipped") throw new Error("Only shipped transfers can be received");
     const items = await tx.select().from(stockTransferItems).where(eq(stockTransferItems.transferId, transferId));
-    for (const item of items) {
-      await tx.insert(locationInventory).values({ locationId: transfer.destinationLocationId, productId: item.productId, quantity: item.quantityShipped })
-        .onDuplicateKeyUpdate({ set: { quantity: sql`${locationInventory.quantity} + ${item.quantityShipped}` } });
-      await tx.update(stockTransferItems).set({ quantityReceived: item.quantityShipped }).where(eq(stockTransferItems.id, item.id));
-      await tx.insert(stockMovements).values({
-        locationId: transfer.destinationLocationId, productId: item.productId, quantityDelta: item.quantityShipped, movementType: "transfer_receipt",
-        referenceType: "stock_transfer", referenceId: transferId, createdById: receivedById,
-      });
-    }
-    await tx.update(stockTransfers).set({ status: "received", receivedById, receivedAt: new Date() }).where(eq(stockTransfers.id, transferId));
+    return applyStockTransferReceiptInTransaction(tx, transfer, items, transferId, receivedById);
   });
+}
+
+export async function applyStockTransferCancellationInTransaction(tx: any, transferId: number) {
+  const [result] = await tx.update(stockTransfers).set({ status: "cancelled" }).where(and(eq(stockTransfers.id, transferId), eq(stockTransfers.status, "requested")));
+  if (Number(result.affectedRows) !== 1) throw new Error("Only requested transfers can be cancelled");
 }
 
 export async function cancelStockTransfer(transferId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database is unavailable");
-  const [result] = await db.update(stockTransfers).set({ status: "cancelled" }).where(and(eq(stockTransfers.id, transferId), eq(stockTransfers.status, "requested")));
-  if (Number(result.affectedRows) !== 1) throw new Error("Only requested transfers can be cancelled");
+  return applyStockTransferCancellationInTransaction(db, transferId);
 }
 
 export async function getLoyaltyMemberByIdentifier(identifier: string) {

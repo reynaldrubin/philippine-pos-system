@@ -71,7 +71,7 @@ The latest automated validation run completed successfully:
 | Check | Result |
 |---|---|
 | TypeScript check | Passing |
-| Vitest suite | 43 tests across 19 test files passing |
+| Vitest suite | 52 tests across 22 test files passing |
 | Production build | Passing with route and vendor code splitting; no chunk-size warning |
 | Restarted development service | Started without current browser or module errors |
 

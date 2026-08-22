@@ -12,7 +12,7 @@
 - [x] Implement configurable staff menu assignments that apply least-privilege menu visibility on top of the server-enforced role permissions.
 - [x] Build an Admin staff-management screen for hierarchy, account creation, branch assignments, active status, and menu access.
 - [x] Add loading, success, and error feedback for all Admin staff-management actions, including status, branch, and menu changes.
-- [ ] Expose existing staff profile editing for hierarchy job title, role, and updateable account details, and validate its full workflow.
+- [x] Expose existing staff profile editing for hierarchy job title, role, and updateable account details, and validate its full workflow.
 - [x] Add staff-update regression coverage for valid persisted hierarchy edits and rejected job-title/role mismatches.
 - [ ] Run browser verification of the Admin staff-management page for profile editing and mutation feedback.
 - [x] Run and record a production build after the latest staff-management changes.
@@ -66,10 +66,10 @@
 - [x] Add checkout transaction tests for persisted receipt content and failed non-cash payment rollback with no writes.
 - [x] Create a retail-appropriate staff dashboard visual system with responsive sidebar navigation, active-location context, PHP formatting, and role-aware navigation controls.
 - [x] Build the register workspace with product discovery, active cart, member lookup/token entry, PHP quote preview, payment controls, checkout feedback, and receipt presentation.
-- [ ] Build inventory, product/category, stock-adjustment, low-stock, transfer, location, register, cash-session, and staff-assignment management screens connected to the API.
-- [ ] Build staff loyalty-member enrollment, member profile, e-card, purchase history, and points-ledger screens.
+- [x] Build inventory, product/category, stock-adjustment, low-stock, transfer, location, register, cash-session, and staff-assignment management screens connected to the API.
+- [x] Build staff loyalty-member enrollment, member profile, e-card, purchase history, and points-ledger screens.
 - [x] Build operational dashboard views for active-location revenue summary, best-selling products, low-stock alerts, and cash-session status placeholders backed by the current data model.
-- [ ] Implement staff dashboard reports for daily revenue, top-selling products, location comparison, cash-session summaries, and low-stock alerts.
+- [x] Implement staff dashboard reports for daily revenue, top-selling products, location comparison, cash-session summaries, and low-stock alerts.
 - [x] Implement loyalty reports for member enrollment, points issued, reversal activity, and top members with authorized location filters.
 - [x] Build a role-aware staff application shell with active location selection, protected navigation, and accessible responsive layouts.
 - [x] Build register UI with product search, cart state, member lookup, QR token entry, payment selection, checkout confirmation, and receipt display.
@@ -78,8 +78,8 @@
 - [x] Render a full fetched receipt with store/register, cashier/member, product lines, quantities, discounts, tax breakdown, payment, totals, and loyalty details, including loading and error states.
 - [x] Include loyalty member number and member name in receipt payload generation, retrieval, display, and regression coverage.
 - [x] Add manager-authorized daily revenue and top-product report procedures and show their active-location results in the dashboard.
-- [ ] Add reporting API queries and replace operational dashboard metric placeholders with authorized live revenue, product, cash-session, and loyalty totals.
-- [ ] Build product, category, location inventory, stock adjustment, transfer, register, cash-session, user, and location management interfaces.
+- [x] Add reporting API queries and replace operational dashboard metric placeholders with authorized live revenue, product, cash-session, and loyalty totals.
+- [x] Build product, category, location inventory, stock adjustment, transfer, register, cash-session, user, and location management interfaces.
 - [x] Add actual location status, activation/reactivation, and editable details to the Admin location-management interface.
 - [x] Add low-stock alerts to the dedicated reports workspace and replace remaining Overview cash-session and loyalty placeholders with authorized live metrics.
 - [ ] Add Reports navigation and explicit loading states to management and report workspaces, then verify their accessible route rendering.
@@ -89,9 +89,12 @@
 - [x] Surface member contact, status, joined date, and lifetime point totals in the staff profile panel.
 - [x] Add service or route coverage for loyalty detail, purchase history, point history, and append-only adjustment balance updates.
 - [x] Build a separate member loyalty portal with member login, PHP purchase history, balance, lifetime earnings, immutable ledger, and scannable e-card display.
-- [ ] Add isolated member JWT persistence, route-aware API authorization, and safe member-session logout behavior for the loyalty portal.
+- [x] Add isolated member JWT persistence, route-aware API authorization, and safe member-session logout behavior for the loyalty portal.
 - [ ] Verify authenticated member login, dashboard loading, logout, and session-token clearing in the portal.
-- [ ] Add Vitest coverage for permissions, location scoping, loyalty calculations, immutable ledgers, stock transfer behavior, checkout atomicity, and void reversals.
+- [x] Add Vitest coverage for permissions, location scoping, loyalty calculations, immutable ledgers, stock transfer behavior, checkout atomicity, and void reversals.
+- [x] Add stock-transfer lifecycle coverage for request, ship, receive, cancellation, inventory changes, and immutable stock movements.
+- [x] Add completed-sale void coverage for stock restoration and loyalty reversal ledger effects.
+- [x] Add direct transfer-request and requested-only cancellation regression coverage.
 - [ ] Run type checking, migrations, server tests, production build, browser verification, and security/error-path validation.
 - [x] Document local setup, data model, test commands, deployment configuration, and operational workflows.
 - [x] Add an explicit data-model and deployment-configuration reference and link it from the project documentation index.

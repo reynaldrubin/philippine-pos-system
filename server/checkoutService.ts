@@ -283,40 +283,37 @@ export async function getDigitalReceipt(receiptNumber: string) {
   return result[0];
 }
 
+export async function applyCompletedSaleVoidWritesInTransaction(tx: any, input: { sale: any; items: any[]; account?: any; paymentMethod?: string; voidedById: number; reason: string }) {
+  const { sale, items, account, paymentMethod, voidedById, reason } = input;
+  if (!sale || sale.status !== "completed") throw new Error("Only completed sales can be voided");
+  for (const item of items) {
+    if (!item.productId) continue;
+    await tx.insert(locationInventory).values({ locationId: sale.locationId, productId: item.productId, quantity: item.quantity })
+      .onDuplicateKeyUpdate({ set: { quantity: sql`${locationInventory.quantity} + ${item.quantity}` } });
+    await tx.insert(stockMovements).values({ locationId: sale.locationId, productId: item.productId, quantityDelta: item.quantity, movementType: "void", referenceType: "sale_void", referenceId: sale.id, note: reason.trim(), createdById: voidedById });
+  }
+  if (sale.memberId && sale.pointsEarned > 0) {
+    if (!account) throw new Error("Loyalty account is unavailable for reversal");
+    const balanceAfter = account.currentPoints - sale.pointsEarned;
+    await tx.update(loyaltyAccounts).set({ currentPoints: balanceAfter }).where(eq(loyaltyAccounts.id, account.id));
+    await tx.insert(loyaltyTransactions).values({ memberId: sale.memberId, accountId: account.id, type: "reversal", points: -sale.pointsEarned, balanceAfter, saleId: sale.id, locationId: sale.locationId, referenceId: sale.receiptNumber, note: reason.trim(), createdById: voidedById });
+  }
+  await tx.update(sales).set({ status: "voided", voidedById, voidedAt: new Date(), voidReason: reason.trim() }).where(eq(sales.id, sale.id));
+  if (paymentMethod === "cash" && sale.cashSessionId) await tx.update(cashSessions).set({ expectedCash: sql`${cashSessions.expectedCash} - ${sale.totalAmount}` }).where(eq(cashSessions.id, sale.cashSessionId));
+  await tx.update(payments).set({ status: "refunded" }).where(eq(payments.saleId, sale.id));
+  return { success: true, saleId: sale.id };
+}
+
 export async function voidCompletedSale(input: { saleId: number; voidedById: number; reason: string }) {
   const db = await getDb();
   if (!db) throw new Error("Database is unavailable");
   return db.transaction(async tx => {
     const sale = await tx.select().from(sales).where(eq(sales.id, input.saleId)).limit(1);
-    if (!sale[0] || sale[0].status !== "completed") throw new Error("Only completed sales can be voided");
     const saleRecord = sale[0];
+    if (!saleRecord || saleRecord.status !== "completed") throw new Error("Only completed sales can be voided");
     const items = await tx.select().from(saleItems).where(eq(saleItems.saleId, input.saleId));
-    for (const item of items) {
-      if (!item.productId) continue;
-      await tx.insert(locationInventory).values({ locationId: saleRecord.locationId, productId: item.productId, quantity: item.quantity })
-        .onDuplicateKeyUpdate({ set: { quantity: sql`${locationInventory.quantity} + ${item.quantity}` } });
-      await tx.insert(stockMovements).values({
-        locationId: saleRecord.locationId, productId: item.productId, quantityDelta: item.quantity, movementType: "void",
-        referenceType: "sale_void", referenceId: input.saleId, note: input.reason.trim(), createdById: input.voidedById,
-      });
-    }
-    if (saleRecord.memberId && saleRecord.pointsEarned > 0) {
-      const account = await tx.select().from(loyaltyAccounts).where(eq(loyaltyAccounts.memberId, saleRecord.memberId)).limit(1);
-      if (!account[0]) throw new Error("Loyalty account is unavailable for reversal");
-      const balanceAfter = account[0].currentPoints - saleRecord.pointsEarned;
-      await tx.update(loyaltyAccounts).set({ currentPoints: balanceAfter }).where(eq(loyaltyAccounts.id, account[0].id));
-      await tx.insert(loyaltyTransactions).values({
-        memberId: saleRecord.memberId, accountId: account[0].id, type: "reversal", points: -saleRecord.pointsEarned, balanceAfter,
-        saleId: saleRecord.id, locationId: saleRecord.locationId, referenceId: saleRecord.receiptNumber, note: input.reason.trim(), createdById: input.voidedById,
-      });
-    }
-    await tx.update(sales).set({ status: "voided", voidedById: input.voidedById, voidedAt: new Date(), voidReason: input.reason.trim() }).where(eq(sales.id, input.saleId));
+    const account = saleRecord.memberId && saleRecord.pointsEarned > 0 ? (await tx.select().from(loyaltyAccounts).where(eq(loyaltyAccounts.memberId, saleRecord.memberId)).limit(1))[0] : undefined;
     const payment = await tx.select({ method: payments.method }).from(payments).where(eq(payments.saleId, input.saleId)).limit(1);
-    if (payment[0]?.method === "cash" && saleRecord.cashSessionId) {
-      await tx.update(cashSessions).set({ expectedCash: sql`${cashSessions.expectedCash} - ${saleRecord.totalAmount}` })
-        .where(eq(cashSessions.id, saleRecord.cashSessionId));
-    }
-    await tx.update(payments).set({ status: "refunded" }).where(eq(payments.saleId, input.saleId));
-    return { success: true, saleId: input.saleId };
+    return applyCompletedSaleVoidWritesInTransaction(tx, { sale: saleRecord, items, account, paymentMethod: payment[0]?.method, voidedById: input.voidedById, reason: input.reason });
   });
 }
