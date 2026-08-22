@@ -1,6 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import { usePosStore } from "@/stores/posStore";
 import { BarChart3, CircleDollarSign, ReceiptText, UsersRound, WalletCards } from "lucide-react";
+import React from "react";
 
 const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
 const number = new Intl.NumberFormat("en-PH");

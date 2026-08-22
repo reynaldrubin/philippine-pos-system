@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import {
   ArrowLeftRight, BadgePercent, BarChart3, ChevronDown, LayoutDashboard, LogOut, Menu, Package, ReceiptText, Settings2, ShoppingCart, Store, UsersRound, UserCog,
 } from "lucide-react";
-import { ReactNode, useEffect, useState } from "react";
+import React, { ReactNode, useEffect, useState } from "react";
 import { useLocation } from "wouter";
 
 type StaffShellProps = { children: ReactNode };

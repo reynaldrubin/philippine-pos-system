@@ -82,7 +82,8 @@
 - [x] Build product, category, location inventory, stock adjustment, transfer, register, cash-session, user, and location management interfaces.
 - [x] Add actual location status, activation/reactivation, and editable details to the Admin location-management interface.
 - [x] Add low-stock alerts to the dedicated reports workspace and replace remaining Overview cash-session and loyalty placeholders with authorized live metrics.
-- [ ] Add Reports navigation and explicit loading states to management and report workspaces, then verify their accessible route rendering.
+- [x] Add Reports navigation and explicit loading states to management and report workspaces, then verify their accessible route rendering.
+- [x] Add browser-like loading and content coverage for Inventory, Transfers, and Operations protected workspaces.
 - [x] Build staff loyalty-member screens for enrollment, e-card display, purchase history, points ledger, and manual point adjustment.
 - [x] Add loading, error, empty, success, and failure states to staff loyalty member activity and manual adjustment workflows.
 - [x] Add regression coverage for append-only manual point adjustments, balance updates, and member activity responses.

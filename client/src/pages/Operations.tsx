@@ -1,7 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import { usePosStore } from "@/stores/posStore";
 import { CircleDollarSign, DoorOpen, MapPinned, MonitorCog, Plus, Store } from "lucide-react";
-import { FormEvent, useState } from "react";
+import React, { FormEvent, useState } from "react";
 
 const peso = (amount: string | number | null | undefined) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(Number(amount ?? 0));
 type LocationForm = { code: string; name: string; type: "store" | "branch" | "warehouse" | "kiosk"; city: string; province: string; address: string; phone: string };

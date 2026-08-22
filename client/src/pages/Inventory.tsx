@@ -1,7 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import { usePosStore } from "@/stores/posStore";
 import { Archive, Boxes, History, PackagePlus, Settings2, SlidersHorizontal, Tags } from "lucide-react";
-import { FormEvent, useEffect, useState } from "react";
+import React, { FormEvent, useEffect, useState } from "react";
 
 const formatPHP = (amount: string | number | null | undefined) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(Number(amount ?? 0));
 

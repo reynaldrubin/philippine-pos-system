@@ -1,7 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import { usePosStore } from "@/stores/posStore";
 import { ArrowRight, ArrowRightLeft, CircleX, PackageCheck, Send, Truck } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import React, { FormEvent, useMemo, useState } from "react";
 
 type TransferLine = { productId: string; quantity: string };
 

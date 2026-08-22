@@ -2,7 +2,7 @@ import { usePosStore } from "@/stores/posStore";
 import { trpc } from "@/lib/trpc";
 import { PHILIPPINE_RETAIL_JOB_TITLES, RETAIL_MENU_KEYS, type RetailMenuKey } from "../../../shared/retailAccess";
 import { ShieldCheck, UserPlus, UsersRound } from "lucide-react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 const labels: Record<RetailMenuKey, string> = { overview: "Overview", register: "Register", inventory: "Inventory", transfers: "Transfers", members: "Loyalty members", operations: "Operations", reports: "Reports", users: "Staff & access" };
 
