@@ -23,6 +23,12 @@ describe("member loyalty portal", () => {
     await expect(appRouter.createCaller(anonymousCtx).loyalty.myPortalSummary()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 
+  it("rejects a previously issued token when the member is no longer active", async () => {
+    dbMocks.getLoyaltyMemberById.mockResolvedValue({ ...member, status: "suspended" });
+    await expect(appRouter.createCaller(await memberCtx()).loyalty.myPortalSummary()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    expect(dbMocks.getLoyaltyAccountByMemberId).not.toHaveBeenCalled();
+  });
+
   it("returns only the authenticated member's loyalty summary, purchases, ledger, and e-card", async () => {
     dbMocks.getLoyaltyMemberById.mockResolvedValue(member);
     dbMocks.getLoyaltyAccountByMemberId.mockResolvedValue(account);

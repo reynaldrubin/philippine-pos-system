@@ -31,6 +31,23 @@ export const users = mysqlTable("users", {
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
+export const authRateLimits = mysqlTable(
+  "authRateLimits",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    channel: mysqlEnum("channel", ["staff", "member"]).notNull(),
+    keyHash: varchar("keyHash", { length: 64 }).notNull(),
+    failures: int("failures").default(0).notNull(),
+    windowEndsAt: timestamp("windowEndsAt").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    uniqueIndex("auth_rate_limits_channel_key_unique").on(table.channel, table.keyHash),
+    index("auth_rate_limits_window_idx").on(table.windowEndsAt),
+  ],
+);
+
 export const staffMenuAssignments = mysqlTable(
   "staffMenuAssignments",
   {

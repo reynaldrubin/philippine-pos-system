@@ -28,6 +28,17 @@
 - [x] Review public and protected interface design for retail usability, accessibility, mobile readiness, and operational clarity.
 - [x] Produce a prioritized enhancement roadmap covering product features, technical architecture, UI/UX, visual design, testing, and operations.
 
+- [ ] Add immutable, privacy-aware audit events for authentication, authorization failures, staff administration, inventory configuration, transfers, voids, loyalty adjustments, and fiscal configuration changes.
+- [ ] Add configurable fiscal business profiles, tax registrations, invoice series, receipt-device registration data, and sequential invoice-number allocation without claiming BIR compliance.
+- [x] Add production-oriented authentication hardening: login rate limits, active-member revalidation, and high-risk activity audit events.
+- [x] Replace the in-memory login throttle with a persistent multi-instance rate-limit store keyed by identifier and request source with expiry.
+- [x] Add router-level regressions proving staff and member repeated login failures return `TOO_MANY_REQUESTS` and success clears the rate-limit state.
+- [x] Add router-level successful-login regressions proving staff and member sessions clear stale persistent throttle records before the next failed attempt.
+- [ ] Build cash-control enhancements including denomination-based close counts, safe drops, variance explanations, and manager approval thresholds.
+- [ ] Build partial returns and exchanges with reason codes, manager authorization, stock restoration, payment/refund tracking, and immutable sales links.
+- [ ] Add operational reporting and workflow UI for the new audit, fiscal, cash-control, and return/exchange capabilities.
+- [ ] Add comprehensive regression coverage, run migrations, validate builds, and document each enhancement for operations.
+
 - [x] Rebuild the current managed Vite/tRPC/Drizzle/MySQL foundation into a strict Next.js, Express, Prisma, and PostgreSQL architecture while preserving the approved business requirements. Superseded by the user-approved managed stack.
 - [x] Configure the required PostgreSQL connection string securely and validate it through the strict-stack Prisma configuration. Superseded by the user-approved managed stack.
 - [x] Create the Next.js application structure with Tailwind CSS and Zustand cart state, replacing the current Vite frontend structure. Superseded by the user-approved managed stack.

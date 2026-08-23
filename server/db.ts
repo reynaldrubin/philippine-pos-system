@@ -2,6 +2,8 @@ import { and, desc, eq, gte, like, lte, ne, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
+  auditLogs,
+  authRateLimits,
   categories,
   cashSessions,
   locationInventory,
@@ -39,6 +41,68 @@ export async function getDb() {
     }
   }
   return _db;
+}
+
+export type AuditLogInput = {
+  userId?: number | null;
+  locationId?: number | null;
+  action: string;
+  entityType: string;
+  entityId?: string | number | null;
+  metadata?: Record<string, unknown>;
+};
+
+export async function appendAuditLog(input: AuditLogInput) {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.insert(auditLogs).values({
+      userId: input.userId ?? null,
+      locationId: input.locationId ?? null,
+      action: input.action,
+      entityType: input.entityType,
+      entityId: input.entityId == null ? null : String(input.entityId),
+      metadata: input.metadata,
+    });
+  } catch (error) {
+    if (!process.env.VITEST && process.env.NODE_ENV !== "test") {
+      console.warn("[Audit] Event persistence failed without interrupting the primary workflow", error instanceof Error ? error.message : error);
+    }
+  }
+}
+
+export async function listAuditLogs(input: { locationId?: number; limit?: number } = {}) {
+  const db = await getDb();
+  if (!db) return [];
+  const limit = Math.min(Math.max(input.limit ?? 50, 1), 100);
+  const query = db.select().from(auditLogs);
+  if (input.locationId) return query.where(eq(auditLogs.locationId, input.locationId)).orderBy(desc(auditLogs.createdAt)).limit(limit);
+  return query.orderBy(desc(auditLogs.createdAt)).limit(limit);
+}
+
+export async function getAuthRateLimit(channel: "staff" | "member", keyHash: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(authRateLimits).where(and(eq(authRateLimits.channel, channel), eq(authRateLimits.keyHash, keyHash))).limit(1);
+  return rows[0];
+}
+
+export async function registerAuthRateLimitFailure(channel: "staff" | "member", keyHash: string, windowEndsAt: Date) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(authRateLimits).values({ channel, keyHash, failures: 1, windowEndsAt })
+    .onDuplicateKeyUpdate({
+      set: {
+        failures: sql`if(${authRateLimits.windowEndsAt} <= now(), 1, ${authRateLimits.failures} + 1)`,
+        windowEndsAt: sql`if(${authRateLimits.windowEndsAt} <= now(), ${windowEndsAt}, ${authRateLimits.windowEndsAt})`,
+      },
+    });
+}
+
+export async function clearAuthRateLimit(channel: "staff" | "member", keyHash: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(authRateLimits).where(and(eq(authRateLimits.channel, channel), eq(authRateLimits.keyHash, keyHash)));
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {

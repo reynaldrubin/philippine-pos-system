@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import type { StaffRole } from "./authTokens";
 import { verifyMemberAccessToken, verifyStaffAccessToken } from "./authTokens";
-import { getStaffById } from "./db";
+import { getLoyaltyMemberById, getStaffById } from "./db";
 import { publicProcedure } from "./_core/trpc";
 
 function bearerToken(value: string | undefined): string | null {
@@ -43,6 +43,8 @@ export const memberProcedure = publicProcedure.use(async ({ ctx, next }) => {
 
   try {
     const member = await verifyMemberAccessToken(token);
+    const currentMember = await getLoyaltyMemberById(member.memberId);
+    if (!currentMember || currentMember.status !== "active") throw new Error("Member account is unavailable");
     return next({ ctx: { ...ctx, member } });
   } catch {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Member access token is invalid or expired" });

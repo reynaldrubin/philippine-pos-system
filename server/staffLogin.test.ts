@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { TrpcContext } from "./_core/context";
 import { hashPassword, verifyStaffAccessToken } from "./authTokens";
 
-const dbMocks = vi.hoisted(() => ({ getStaffByEmail: vi.fn(), getStaffMenuAccess: vi.fn(), listLocationsForUser: vi.fn() }));
+const dbMocks = vi.hoisted(() => ({ appendAuditLog: vi.fn(), getStaffByEmail: vi.fn(), getStaffMenuAccess: vi.fn(), listLocationsForUser: vi.fn() }));
 vi.mock("./db", async importOriginal => ({ ...(await importOriginal<typeof import("./db")>()), ...dbMocks }));
 
 import { appRouter } from "./routers";
@@ -17,5 +17,6 @@ describe("post-bootstrap staff login", () => {
     const session = await appRouter.createCaller(ctx).staffAuth.login({ identifier: "owner@example.com", password: "OwnerBootstrapPass123" });
     await expect(verifyStaffAccessToken(session.accessToken)).resolves.toEqual({ userId: 44, role: "admin", kind: "staff" });
     expect(session.menuKeys).toContain("users");
+    expect(dbMocks.appendAuditLog).toHaveBeenCalledWith(expect.objectContaining({ action: "staff.login.succeeded", userId: 44 }));
   });
 });

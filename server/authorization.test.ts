@@ -3,6 +3,7 @@ import type { TrpcContext } from "./_core/context";
 import { issueStaffAccessToken } from "./authTokens";
 
 const dbMocks = vi.hoisted(() => ({
+  appendAuditLog: vi.fn(),
   assignUserToLocation: vi.fn(),
   closeCashSession: vi.fn(),
   createLocation: vi.fn(),
