@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TrpcContext } from "./_core/context";
 import { issueStaffAccessToken } from "./authTokens";
 
-const dbMocks = vi.hoisted(() => ({ getStaffById: vi.fn(), hasLocationAccess: vi.fn(), getLocationDashboardReport: vi.fn(), getCashSessionReport: vi.fn(), getLoyaltyLocationReport: vi.fn(), listLocationsForUser: vi.fn() }));
+const dbMocks = vi.hoisted(() => ({ appendAuditLog: vi.fn(), getStaffById: vi.fn(), hasLocationAccess: vi.fn(), getLocationDashboardReport: vi.fn(), getCashSessionReport: vi.fn(), getLoyaltyLocationReport: vi.fn(), listLocationsForUser: vi.fn() }));
 vi.mock("./db", async importOriginal => ({ ...(await importOriginal<typeof import("./db")>()), ...dbMocks }));
 
 import { appRouter } from "./routers";
@@ -22,6 +22,7 @@ describe("location dashboard reporting authorization", () => {
     const caller = await managerCaller();
     await expect(caller.reports.locationDashboard({ locationId: 42 })).rejects.toMatchObject({ code: "FORBIDDEN" });
     expect(dbMocks.getLocationDashboardReport).not.toHaveBeenCalled();
+    expect(dbMocks.appendAuditLog).toHaveBeenCalledWith(expect.objectContaining({ action: "authorization.denied", userId: 71, locationId: 42, metadata: { policy: "location_assignment", role: "manager" } }));
   });
 
   it("returns daily revenue and top products for an assigned location", async () => {

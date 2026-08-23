@@ -578,7 +578,9 @@ export async function recordCashCount(input: { cashSessionId: number; countedByI
   await db.transaction(async tx => {
     const session = await tx.select({ id: cashSessions.id, status: cashSessions.status }).from(cashSessions).where(eq(cashSessions.id, input.cashSessionId)).limit(1).for("update");
     if (!session[0] || session[0].status !== "open") throw new Error("Cash session is not available for a count");
-    await tx.insert(cashCountEntries).values(count.entries.map(entry => ({ cashSessionId: input.cashSessionId, denomination: entry.denomination, quantity: entry.quantity, countedAmount: entry.countedAmount, countedById: input.countedById })));
+    await tx.insert(cashCountEntries).values(count.entries.map(entry => ({ cashSessionId: input.cashSessionId, denomination: entry.denomination, quantity: entry.quantity, countedAmount: entry.countedAmount, countedById: input.countedById }))).onDuplicateKeyUpdate({
+      set: { quantity: sql`values(${cashCountEntries.quantity})`, countedAmount: sql`values(${cashCountEntries.countedAmount})`, countedById: sql`values(${cashCountEntries.countedById})` },
+    });
   });
   return count;
 }
@@ -591,6 +593,19 @@ export async function createCashSafeDrop(input: { cashSessionId: number; locatio
   if (!(Number(input.amount) > 0)) throw new Error("Safe-drop amount must be positive");
   const result = await db.insert(cashSafeDrops).values({ ...input, amount: input.amount, reason: input.reason.trim(), status: "pending" });
   return Number(result[0].insertId);
+}
+
+export async function listCashSafeDrops(locationId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(cashSafeDrops).where(eq(cashSafeDrops.locationId, locationId)).orderBy(desc(cashSafeDrops.createdAt)).limit(100);
+}
+
+export async function getCashSafeDrop(safeDropId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(cashSafeDrops).where(eq(cashSafeDrops.id, safeDropId)).limit(1);
+  return rows[0];
 }
 
 export async function reviewCashSafeDrop(input: { safeDropId: number; approvedById: number; approve: boolean }) {
@@ -617,6 +632,16 @@ export async function approveCashVariance(input: { cashSessionId: number; approv
   if (session.closedById === input.approvedById) throw new Error("A cash variance must be approved by a different staff member");
   await db.update(cashSessions).set({ varianceApprovalStatus: "approved", varianceApprovedById: input.approvedById, varianceApprovedAt: new Date() }).where(eq(cashSessions.id, session.id));
   return { variance: session.variance };
+}
+
+export async function listPendingCashVariances(locationId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: cashSessions.id, registerCode: registers.code, registerName: registers.name, variance: cashSessions.variance,
+    varianceReason: cashSessions.varianceReason, closedAt: cashSessions.closedAt, closedById: cashSessions.closedById,
+  }).from(cashSessions).innerJoin(registers, eq(cashSessions.registerId, registers.id))
+    .where(and(eq(registers.locationId, locationId), eq(cashSessions.status, "closed"), eq(cashSessions.varianceApprovalStatus, "pending"))).orderBy(desc(cashSessions.closedAt));
 }
 
 export async function listCategories() {

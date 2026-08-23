@@ -67,6 +67,15 @@ describe("router-level location authorization", () => {
     await expect(caller.cashSessions.open({ locationId: 99, registerId: 7, openingCash: "1000.00" })).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(caller.loyalty.registerMember({ firstName: "Ana", lastName: "Santos", mobile: "09171234567", password: "MemberPass123", joinedLocationId: 99 })).rejects.toMatchObject({ code: "FORBIDDEN" });
     expect(dbMocks.createLoyaltyMember).not.toHaveBeenCalled();
+    expect(dbMocks.appendAuditLog).toHaveBeenCalledWith(expect.objectContaining({ action: "authorization.denied", locationId: 99, metadata: { policy: "location_assignment", role: "manager" } }));
+  });
+
+  it("audits an unassigned cash-session open attempt with sanitized location policy metadata", async () => {
+    dbMocks.getStaffById.mockResolvedValue(staff("manager"));
+    const caller = callerFor(await issueStaffAccessToken(12, "manager"));
+    await expect(caller.cashSessions.open({ locationId: 99, registerId: 7, openingCash: "1000.00" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(dbMocks.appendAuditLog).toHaveBeenCalledTimes(1);
+    expect(dbMocks.appendAuditLog).toHaveBeenCalledWith({ userId: 12, locationId: 99, action: "authorization.denied", entityType: "location", entityId: 99, metadata: { policy: "location_assignment", role: "manager" } });
   });
 
   it("allows Admin assignment management and rejects the same calls for a manager", async () => {
@@ -84,5 +93,17 @@ describe("router-level location authorization", () => {
     await expect(adminCaller.locations.assignments({ locationId: 3 })).resolves.toHaveLength(1);
     expect(dbMocks.removeUserFromLocation).toHaveBeenCalledWith(9, 3);
     expect(dbMocks.updateLocation).toHaveBeenCalledWith({ locationId: 3, isActive: false });
+  });
+
+  it("rejects an inactive staff account and records only sanitized denial metadata", async () => {
+    dbMocks.getStaffById.mockResolvedValue({ ...staff("cashier"), isActive: false });
+    const caller = callerFor(await issueStaffAccessToken(12, "cashier"));
+    await expect(caller.locations.list()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    expect(dbMocks.appendAuditLog).toHaveBeenCalledWith({ userId: 12, action: "authorization.denied", entityType: "staff", entityId: 12, metadata: { policy: "staff_account_active" } });
+  });
+
+  it("rejects an invalid staff token and records no token or identifier", async () => {
+    await expect(callerFor("not-a-valid-token").locations.list()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    expect(dbMocks.appendAuditLog).toHaveBeenCalledWith({ action: "authorization.denied", entityType: "staff", metadata: { policy: "staff_token_invalid" } });
   });
 });

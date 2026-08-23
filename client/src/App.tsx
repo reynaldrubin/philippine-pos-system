@@ -19,6 +19,9 @@ const Reports = lazy(() => import("./pages/Reports"));
 const Transfers = lazy(() => import("./pages/Transfers"));
 const Users = lazy(() => import("./pages/Users"));
 const Compliance = lazy(() => import("./pages/Compliance"));
+const CashControls = lazy(() => import("./pages/CashControls"));
+const CashClose = lazy(() => import("./pages/CashClose"));
+const Returns = lazy(() => import("./pages/Returns"));
 
 function Protected({ children }: { children: React.ReactNode }) {
   const accessToken = usePosStore(state => state.accessToken);
@@ -45,6 +48,9 @@ function Router() {
       <Route path={"/reports"}><Protected><Reports /></Protected></Route>
       <Route path={"/users"}><Protected><Users /></Protected></Route>
       <Route path={"/compliance"}><Protected><Compliance /></Protected></Route>
+      <Route path={"/cash-controls"}><Protected><CashControls /></Protected></Route>
+      <Route path={"/cash-close"}><Protected><CashClose /></Protected></Route>
+      <Route path={"/returns"}><Protected><Returns /></Protected></Route>
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

@@ -28,9 +28,12 @@
 - [x] Review public and protected interface design for retail usability, accessibility, mobile readiness, and operational clarity.
 - [x] Produce a prioritized enhancement roadmap covering product features, technical architecture, UI/UX, visual design, testing, and operations.
 
-- [ ] Add immutable, privacy-aware audit events for authentication, authorization failures, staff administration, inventory configuration, transfers, voids, loyalty adjustments, and fiscal configuration changes.
-- [ ] Add privacy-aware audit logging for authorization denials across protected Admin, Manager, staff, and member procedures without exposing sensitive identifiers or credentials.
-- [ ] Add regression tests proving denied authorization attempts emit sanitized audit events.
+- [x] Add immutable, privacy-aware audit events for authentication, authorization failures, staff administration, inventory configuration, transfers, voids, loyalty adjustments, and fiscal configuration changes.
+- [x] Add privacy-aware audit logging for authorization denials across protected Admin, Manager, staff, and member procedures without exposing sensitive identifiers or credentials.
+- [x] Add regression tests proving denied authorization attempts emit sanitized audit events.
+- [x] Add denial-audit regressions for invalid protected staff/member tokens and cash-session or transfer location denials, asserting sanitized metadata only.
+- [x] Add a focused cash-session or transfer denial audit regression with only sanitized policy/location metadata.
+- [x] Add an invalid protected member-token audit regression proving only `member_token_invalid` policy metadata is written.
 - [x] Add configurable fiscal business profiles, tax registrations, invoice series, receipt-device registration data, and sequential invoice-number allocation without claiming BIR compliance.
 - [x] Optionally issue an active location invoice-series document in the same completed-checkout transaction and surface its sequential number in the receipt payload.
 - [x] Build an Admin-only Fiscal & Audit workspace for configuration, issued-document history, and privacy-aware operational audit review, with an explicit non-certification notice.
@@ -43,6 +46,10 @@
 - [x] Add cash-control schema and service foundations for denomination counts, pending safe drops, explanation-gated material cash variances, and distinct-manager variance approval.
 - [x] Add manager-authorized partial-return API and immutable schema records for reason codes, proportional PHP refunds, refund references, and stock restoration movements.
 - [x] Add PHP centavo calculation coverage for denomination counting, material-variance thresholds, and partial-return proration limits.
+- [x] Build a manager/Admin Cash Controls workspace for denomination counts, safe-drop review, and pending material-variance approvals.
+- [ ] Add Operations close-session variance-explanation input and clear material-variance feedback.
+- [ ] Make denomination count submissions idempotent or explicitly editable for a cash session.
+- [ ] Add cash-control service/router regressions for material close variance, recount behavior, safe-drop review, and distinct-manager variance approval.
 - [ ] Add operational reporting and workflow UI for the new audit, fiscal, cash-control, and return/exchange capabilities.
 - [ ] Add comprehensive regression coverage, run migrations, validate builds, and document each enhancement for operations.
 

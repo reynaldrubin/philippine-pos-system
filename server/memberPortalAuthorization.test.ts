@@ -3,6 +3,7 @@ import type { TrpcContext } from "./_core/context";
 import { issueMemberAccessToken } from "./authTokens";
 
 const dbMocks = vi.hoisted(() => ({
+  appendAuditLog: vi.fn(),
   getLoyaltyAccountByMemberId: vi.fn(),
   getLoyaltyMemberById: vi.fn(),
   getLoyaltyMemberDetail: vi.fn(),
@@ -21,12 +22,20 @@ const anonymousCtx: TrpcContext = { user: null, req: { headers: {} } as TrpcCont
 describe("member loyalty portal", () => {
   it("rejects portal data when no member token is supplied", async () => {
     await expect(appRouter.createCaller(anonymousCtx).loyalty.myPortalSummary()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    expect(dbMocks.appendAuditLog).toHaveBeenCalledWith({ action: "authorization.denied", entityType: "loyalty_member", metadata: { policy: "member_token_missing" } });
+  });
+
+  it("rejects an invalid member token and records no token or member identifier", async () => {
+    const invalidCtx: TrpcContext = { user: null, req: { headers: { authorization: "Bearer invalid-member-token" } } as TrpcContext["req"], res: {} as TrpcContext["res"] };
+    await expect(appRouter.createCaller(invalidCtx).loyalty.myPortalSummary()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    expect(dbMocks.appendAuditLog).toHaveBeenCalledWith({ action: "authorization.denied", entityType: "loyalty_member", metadata: { policy: "member_token_invalid" } });
   });
 
   it("rejects a previously issued token when the member is no longer active", async () => {
     dbMocks.getLoyaltyMemberById.mockResolvedValue({ ...member, status: "suspended" });
     await expect(appRouter.createCaller(await memberCtx()).loyalty.myPortalSummary()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     expect(dbMocks.getLoyaltyAccountByMemberId).not.toHaveBeenCalled();
+    expect(dbMocks.appendAuditLog).toHaveBeenCalledWith({ action: "authorization.denied", entityType: "loyalty_member", entityId: 29, metadata: { policy: "member_account_active" } });
   });
 
   it("returns only the authenticated member's loyalty summary, purchases, ledger, and e-card", async () => {

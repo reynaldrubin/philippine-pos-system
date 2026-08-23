@@ -1,0 +1,26 @@
+import { trpc } from "@/lib/trpc";
+import { usePosStore } from "@/stores/posStore";
+import { CircleDollarSign, ShieldCheck } from "lucide-react";
+import React, { FormEvent, useMemo, useState } from "react";
+
+const peso = (value: string | number | null | undefined) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(Number(value ?? 0));
+
+export default function CashClose() {
+  const { activeLocationId, user } = usePosStore();
+  const [cashSessionId, setCashSessionId] = useState("");
+  const [closingCash, setClosingCash] = useState("");
+  const [varianceReason, setVarianceReason] = useState("");
+  const [notice, setNotice] = useState<{ kind: "success" | "error"; text: string } | null>(null);
+  const sessions = trpc.cashSessions.list.useQuery({ locationId: activeLocationId ?? 0 }, { enabled: Boolean(activeLocationId), retry: false });
+  const selected = sessions.data?.find(session => session.id === Number(cashSessionId));
+  const variance = useMemo(() => selected && closingCash !== "" && Number.isFinite(Number(closingCash)) ? Number(closingCash) - Number(selected.expectedCash) : null, [closingCash, selected]);
+  const material = variance !== null && Math.abs(variance) >= 100;
+  const close = trpc.cashSessions.close.useMutation({
+    onSuccess: result => { setNotice({ kind: "success", text: `Session closed. Variance: ${peso(result.variance)}${result.varianceApprovalStatus === "pending" ? "; approval is now pending." : "."}` }); setCashSessionId(""); setClosingCash(""); setVarianceReason(""); sessions.refetch(); },
+    onError: error => setNotice({ kind: "error", text: error.message }),
+  });
+  if (user?.role !== "manager" && user?.role !== "admin") return <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">Cash-session closing is available to Store Management and Head Office roles.</div>;
+  if (!activeLocationId) return <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">Select an assigned location before closing a cash session.</div>;
+  const submit = (event: FormEvent) => { event.preventDefault(); if (!cashSessionId) return; close.mutate({ cashSessionId: Number(cashSessionId), closingCash, varianceReason: varianceReason || undefined }); };
+  return <div className="mx-auto max-w-3xl space-y-6"><header><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#738278]">Register close</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#17352e]">Close cash session</h1><p className="mt-2 text-sm text-[#74827b]">Compare the final counted cash with the current expected cash and document material differences before closing.</p></header>{notice && <div className={`rounded-xl border px-4 py-3 text-sm ${notice.kind === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}>{notice.text}</div>}<article className="rounded-2xl border border-[#dce3db] bg-white p-6"><div className="flex items-start gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#e9f3e9] text-[#2e6853]"><CircleDollarSign className="h-5 w-5" /></span><div><h2 className="font-semibold text-[#17352e]">Counted close</h2><p className="mt-1 text-sm text-[#74827b]">A difference of ₱100 or more requires an explanation and will enter independent manager approval.</p></div></div><form onSubmit={submit} className="mt-6 grid gap-4"><select required value={cashSessionId} onChange={event => setCashSessionId(event.target.value)} className="input"><option value="">Choose open cash session</option>{sessions.data?.map(session => <option key={session.id} value={session.id}>{session.registerCode} · {session.registerName} · Expected {peso(session.expectedCash)}</option>)}</select><input required value={closingCash} onChange={event => setClosingCash(event.target.value)} className="input" inputMode="decimal" placeholder="Final counted cash in ₱" />{selected && <div className={`rounded-xl px-4 py-3 text-sm ${material ? "border border-amber-200 bg-amber-50 text-amber-900" : "bg-[#f5f8f5] text-[#52655b]"}`}>Expected <strong>{peso(selected.expectedCash)}</strong> · Calculated variance <strong>{peso(variance ?? 0)}</strong>{material && <span className="block mt-1">A variance explanation is required and a separate manager approval will be needed.</span>}</div>}{material && <textarea required value={varianceReason} onChange={event => setVarianceReason(event.target.value)} className="input min-h-28 resize-y" placeholder="Explain the material cash difference" />}<button disabled={close.isPending || !sessions.data?.length || (material && varianceReason.trim().length < 3)} className="button">{close.isPending ? "Closing…" : "Close cash session"}</button></form></article><div className="rounded-xl border border-[#d8e6db] bg-[#f4faf4] p-4 text-sm text-[#315b45]"><div className="flex items-center gap-2 font-semibold"><ShieldCheck className="h-4 w-4" />Control trail</div><p className="mt-1 leading-5">Use Cash Controls to save denomination counts and manage safe drops before final close. Close results are retained with expected cash, counted cash, variance, explanation, and approval status.</p></div></div>;
+}

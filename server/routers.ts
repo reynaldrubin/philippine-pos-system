@@ -6,7 +6,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, publicProcedure, router } from "./_core/trpc";
 import { hashPassword, issueMemberAccessToken, issueStaffAccessToken, verifyPassword } from "./authTokens";
 import { completeCheckout, getDigitalReceipt, getSaleAccessInfo, quoteCheckout, voidCompletedSale } from "./checkoutService";
-import { processPartialReturn } from "./returnService";
+import { getReturnableSale, processPartialReturn } from "./returnService";
 import {
   adjustLocationInventory,
   assignUserToLocation,
@@ -14,6 +14,8 @@ import {
   closeCashSession,
   recordCashCount,
   approveCashVariance,
+  createCashSafeDrop,
+  getCashSafeDrop,
   createCategory,
   createBusinessProfile,
   createInvoiceSeries,
@@ -53,6 +55,8 @@ import {
   listMemberPointTransactions,
   listMemberPurchases,
   listOpenCashSessionsForLocation,
+  listCashSafeDrops,
+  listPendingCashVariances,
   listLowStockForLocation,
   listInvoiceSeries,
   listProducts,
@@ -65,6 +69,7 @@ import {
   listTaxRegistrations,
   openCashSession,
   receiveStockTransfer,
+  reviewCashSafeDrop,
   removeUserFromLocation,
   setStaffMenuAccess,
   setLocationInventorySettings,
@@ -111,6 +116,16 @@ function loginRequestSource(headers: Record<string, string | string[] | undefine
   const forwarded = headers["x-forwarded-for"];
   const value = Array.isArray(forwarded) ? forwarded[0] : forwarded;
   return value?.split(",")[0]?.trim() || "unknown";
+}
+
+function denyLocationAccess(ctx: { staff: { userId: number; role: "cashier" | "manager" | "admin" } }, locationId: number, policy: string, message: string): never {
+  void appendAuditLog({ userId: ctx.staff.userId, locationId, action: "authorization.denied", entityType: "location", entityId: locationId, metadata: { policy, role: ctx.staff.role } });
+  throw new TRPCError({ code: "FORBIDDEN", message });
+}
+
+async function requireLocationAccess(ctx: { staff: { userId: number; role: "cashier" | "manager" | "admin" } }, locationId: number, message = "You are not assigned to this location") {
+  if (await hasLocationAccess(ctx.staff.userId, ctx.staff.role, locationId)) return;
+  denyLocationAccess(ctx, locationId, "location_assignment", message);
 }
 
 export const appRouter = router({
@@ -183,7 +198,7 @@ export const appRouter = router({
   reports: router({
     locationDashboard: managerProcedure.input(z.object({ locationId: z.number().int().positive() }))
       .query(async ({ ctx, input }) => {
-        if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, input.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this location" });
+        await requireLocationAccess(ctx, input.locationId);
         return getLocationDashboardReport(input.locationId);
       }),
     locationComparison: managerProcedure.query(async ({ ctx }) => {
@@ -192,12 +207,12 @@ export const appRouter = router({
     }),
     cashSessions: managerProcedure.input(z.object({ locationId: z.number().int().positive() }))
       .query(async ({ ctx, input }) => {
-        if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, input.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this location" });
+        await requireLocationAccess(ctx, input.locationId);
         return getCashSessionReport(input.locationId);
       }),
     loyalty: managerProcedure.input(z.object({ locationId: z.number().int().positive() }))
       .query(async ({ ctx, input }) => {
-        if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, input.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this location" });
+        await requireLocationAccess(ctx, input.locationId);
         return getLoyaltyLocationReport(input.locationId);
       }),
   }),
@@ -356,13 +371,13 @@ export const appRouter = router({
     registers: staffProcedure
       .input(z.object({ locationId: z.number().int().positive() }))
       .query(async ({ ctx, input }) => {
-        if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, input.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this location" });
+        await requireLocationAccess(ctx, input.locationId);
         return listRegistersForLocation(input.locationId);
       }),
     createRegister: managerProcedure
       .input(z.object({ locationId: z.number().int().positive(), code: z.string().trim().min(2).max(40), name: z.string().trim().min(2).max(120) }))
       .mutation(async ({ ctx, input }) => {
-        if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, input.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this location" });
+        await requireLocationAccess(ctx, input.locationId);
         const registerId = await createRegister(input);
         await appendAuditLog({ userId: ctx.staff.userId, locationId: input.locationId, action: "register.created", entityType: "register", entityId: registerId, metadata: { code: input.code } });
         return { registerId };
@@ -371,13 +386,13 @@ export const appRouter = router({
   cashSessions: router({
     list: staffProcedure.input(z.object({ locationId: z.number().int().positive() }))
       .query(async ({ ctx, input }) => {
-        if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, input.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this location" });
+        await requireLocationAccess(ctx, input.locationId);
         return listOpenCashSessionsForLocation(input.locationId, ctx.staff.role === "cashier" ? ctx.staff.userId : undefined);
       }),
     open: staffProcedure
       .input(z.object({ locationId: z.number().int().positive(), registerId: z.number().int().positive(), openingCash: z.string().regex(/^\d+(\.\d{1,2})?$/) }))
       .mutation(async ({ ctx, input }) => {
-        if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, input.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this location" });
+        await requireLocationAccess(ctx, input.locationId);
         if (!(await getRegisterAtLocation(input.registerId, input.locationId))) throw new TRPCError({ code: "BAD_REQUEST", message: "Register is not active at the selected location" });
         const cashSessionId = await openCashSession({ registerId: input.registerId, openedById: ctx.staff.userId, openingCash: input.openingCash });
         await appendAuditLog({ userId: ctx.staff.userId, locationId: input.locationId, action: "cash_session.opened", entityType: "cash_session", entityId: cashSessionId, metadata: { registerId: input.registerId } });
@@ -389,9 +404,8 @@ export const appRouter = router({
         const session = await getCashSessionWithRegister(input.cashSessionId);
         if (!session) throw new TRPCError({ code: "NOT_FOUND", message: "Cash session was not found" });
         const mayClose = session.openedById === ctx.staff.userId || ctx.staff.role === "manager" || ctx.staff.role === "admin";
-        if (!mayClose || !(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, session.locationId))) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "You cannot close this cash session" });
-        }
+        if (!mayClose) denyLocationAccess(ctx, session.locationId, "cash_session_close", "You cannot close this cash session");
+        await requireLocationAccess(ctx, session.locationId, "You cannot close this cash session");
         const result = await closeCashSession({ cashSessionId: input.cashSessionId, closedById: ctx.staff.userId, closingCash: input.closingCash, varianceReason: input.varianceReason });
         await appendAuditLog({ userId: ctx.staff.userId, locationId: session.locationId, action: "cash_session.closed", entityType: "cash_session", entityId: input.cashSessionId, metadata: { variance: result.variance, approvalStatus: result.varianceApprovalStatus } });
         return result;
@@ -399,8 +413,10 @@ export const appRouter = router({
     count: staffProcedure.input(z.object({ cashSessionId: z.number().int().positive(), entries: z.array(z.object({ denomination: z.string().regex(/^\d+(\.\d{1,2})?$/), quantity: z.number().int().min(0) })).min(1).max(20) }))
       .mutation(async ({ ctx, input }) => {
         const session = await getCashSessionWithRegister(input.cashSessionId);
-        const mayCount = session && (session.openedById === ctx.staff.userId || ctx.staff.role === "manager" || ctx.staff.role === "admin") && await hasLocationAccess(ctx.staff.userId, ctx.staff.role, session.locationId);
-        if (!mayCount) throw new TRPCError({ code: "FORBIDDEN", message: "You cannot count this cash session" });
+        if (!session) throw new TRPCError({ code: "NOT_FOUND", message: "Cash session was not found" });
+        const mayCount = session.openedById === ctx.staff.userId || ctx.staff.role === "manager" || ctx.staff.role === "admin";
+        if (!mayCount) denyLocationAccess(ctx, session.locationId, "cash_session_count", "You cannot count this cash session");
+        await requireLocationAccess(ctx, session.locationId, "You cannot count this cash session");
         const result = await recordCashCount({ ...input, countedById: ctx.staff.userId });
         await appendAuditLog({ userId: ctx.staff.userId, locationId: session.locationId, action: "cash_session.counted", entityType: "cash_session", entityId: input.cashSessionId, metadata: { denominationRows: input.entries.length, total: result.total } });
         return result;
@@ -408,11 +424,32 @@ export const appRouter = router({
     approveVariance: managerProcedure.input(z.object({ cashSessionId: z.number().int().positive() }))
       .mutation(async ({ ctx, input }) => {
         const session = await getCashSessionWithRegister(input.cashSessionId);
-        if (!session || !(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, session.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this cash session" });
+        if (!session) throw new TRPCError({ code: "NOT_FOUND", message: "Cash session was not found" });
+        await requireLocationAccess(ctx, session.locationId, "You are not assigned to this cash session");
         const result = await approveCashVariance({ cashSessionId: input.cashSessionId, approvedById: ctx.staff.userId });
         await appendAuditLog({ userId: ctx.staff.userId, locationId: session.locationId, action: "cash_session.variance_approved", entityType: "cash_session", entityId: input.cashSessionId, metadata: { variance: result.variance } });
         return result;
       }),
+    safeDrops: staffProcedure.input(z.object({ locationId: z.number().int().positive() }))
+      .query(async ({ ctx, input }) => { await requireLocationAccess(ctx, input.locationId); return listCashSafeDrops(input.locationId); }),
+    createSafeDrop: staffProcedure.input(z.object({ cashSessionId: z.number().int().positive(), locationId: z.number().int().positive(), amount: phpAmountSchema.refine(value => Number(value) > 0), reason: z.string().trim().min(3).max(500) }))
+      .mutation(async ({ ctx, input }) => {
+        await requireLocationAccess(ctx, input.locationId);
+        const safeDropId = await createCashSafeDrop({ ...input, createdById: ctx.staff.userId });
+        await appendAuditLog({ userId: ctx.staff.userId, locationId: input.locationId, action: "cash_safe_drop.created", entityType: "cash_safe_drop", entityId: safeDropId, metadata: { amount: input.amount } });
+        return { safeDropId };
+      }),
+    reviewSafeDrop: managerProcedure.input(z.object({ safeDropId: z.number().int().positive(), approve: z.boolean() }))
+      .mutation(async ({ ctx, input }) => {
+        const safeDrop = await getCashSafeDrop(input.safeDropId);
+        if (!safeDrop) throw new TRPCError({ code: "NOT_FOUND", message: "Safe drop was not found" });
+        await requireLocationAccess(ctx, safeDrop.locationId);
+        const result = await reviewCashSafeDrop({ ...input, approvedById: ctx.staff.userId });
+        await appendAuditLog({ userId: ctx.staff.userId, locationId: result.locationId, action: `cash_safe_drop.${result.status}`, entityType: "cash_safe_drop", entityId: input.safeDropId, metadata: {} });
+        return result;
+      }),
+    pendingVariances: managerProcedure.input(z.object({ locationId: z.number().int().positive() }))
+      .query(async ({ ctx, input }) => { await requireLocationAccess(ctx, input.locationId); return listPendingCashVariances(input.locationId); }),
   }),
   categories: router({
     list: staffProcedure.query(() => listCategories()),
@@ -449,45 +486,46 @@ export const appRouter = router({
   inventory: router({
     list: staffProcedure.input(z.object({ locationId: z.number().int().positive(), search: z.string().trim().max(120).optional() }))
       .query(async ({ ctx, input }) => {
-        if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, input.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this location" });
+        await requireLocationAccess(ctx, input.locationId);
         return listInventoryForLocation(input.locationId, input.search);
       }),
     lowStock: managerProcedure.input(z.object({ locationId: z.number().int().positive() }))
       .query(async ({ ctx, input }) => {
-        if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, input.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this location" });
+        await requireLocationAccess(ctx, input.locationId);
         return listLowStockForLocation(input.locationId);
       }),
     settings: managerProcedure.input(z.object({ locationId: z.number().int().positive(), productId: z.number().int().positive(), lowStockThreshold: quantitySchema.refine(value => Number(value) >= 0), reorderQuantity: quantitySchema.refine(value => Number(value) >= 0), priceOverride: phpAmountSchema.nullable().optional() }))
       .mutation(async ({ ctx, input }) => {
-        if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, input.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this location" });
+        await requireLocationAccess(ctx, input.locationId);
         await setLocationInventorySettings(input);
         await appendAuditLog({ userId: ctx.staff.userId, locationId: input.locationId, action: "inventory.settings.updated", entityType: "location_inventory", entityId: `${input.locationId}:${input.productId}`, metadata: { productId: input.productId } });
         return { success: true };
       }),
     adjust: managerProcedure.input(z.object({ locationId: z.number().int().positive(), productId: z.number().int().positive(), quantityDelta: quantitySchema.refine(value => Number(value) !== 0), reason: z.enum(["receiving", "adjustment"]), note: z.string().trim().max(1000).optional() }))
       .mutation(async ({ ctx, input }) => {
-        if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, input.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this location" });
+        await requireLocationAccess(ctx, input.locationId);
         const movementId = await adjustLocationInventory({ ...input, createdById: ctx.staff.userId });
         await appendAuditLog({ userId: ctx.staff.userId, locationId: input.locationId, action: "inventory.adjusted", entityType: "stock_movement", entityId: movementId, metadata: { productId: input.productId, reason: input.reason } });
         return { movementId };
       }),
     movements: managerProcedure.input(z.object({ locationId: z.number().int().positive(), productId: z.number().int().positive().optional() }))
       .query(async ({ ctx, input }) => {
-        if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, input.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this location" });
+        await requireLocationAccess(ctx, input.locationId);
         return listStockMovements(input.locationId, input.productId);
       }),
   }),
   stockTransfers: router({
     list: managerProcedure.input(z.object({ locationId: z.number().int().positive() }))
       .query(async ({ ctx, input }) => {
-        if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, input.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this location" });
+        await requireLocationAccess(ctx, input.locationId);
         return listStockTransfersForLocation(input.locationId);
       }),
     request: managerProcedure.input(z.object({ sourceLocationId: z.number().int().positive(), destinationLocationId: z.number().int().positive(), note: z.string().trim().max(1000).optional(), items: z.array(z.object({ productId: z.number().int().positive(), quantityRequested: quantitySchema.refine(value => Number(value) > 0) })).min(1) }))
       .mutation(async ({ ctx, input }) => {
         const canUseSource = await hasLocationAccess(ctx.staff.userId, ctx.staff.role, input.sourceLocationId);
         const canUseDestination = await hasLocationAccess(ctx.staff.userId, ctx.staff.role, input.destinationLocationId);
-        if (!canUseSource || !canUseDestination) throw new TRPCError({ code: "FORBIDDEN", message: "You must be assigned to both transfer locations" });
+        if (!canUseSource) denyLocationAccess(ctx, input.sourceLocationId, "transfer_source_assignment", "You must be assigned to both transfer locations");
+        if (!canUseDestination) denyLocationAccess(ctx, input.destinationLocationId, "transfer_destination_assignment", "You must be assigned to both transfer locations");
         const transferNumber = `TRF-${Date.now()}-${ctx.staff.userId}`;
         const transferId = await createStockTransfer({ ...input, transferNumber, requestedById: ctx.staff.userId });
         await appendAuditLog({ userId: ctx.staff.userId, locationId: input.sourceLocationId, action: "transfer.requested", entityType: "stock_transfer", entityId: transferId, metadata: { destinationLocationId: input.destinationLocationId, lineCount: input.items.length } });
@@ -499,14 +537,14 @@ export const appRouter = router({
         if (!transfer) throw new TRPCError({ code: "NOT_FOUND", message: "Stock transfer was not found" });
         const canAccessSource = await hasLocationAccess(ctx.staff.userId, ctx.staff.role, transfer.sourceLocationId);
         const canAccessDestination = await hasLocationAccess(ctx.staff.userId, ctx.staff.role, transfer.destinationLocationId);
-        if (!canAccessSource && !canAccessDestination) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to either transfer location" });
+        if (!canAccessSource && !canAccessDestination) denyLocationAccess(ctx, transfer.sourceLocationId, "transfer_assignment", "You are not assigned to either transfer location");
         return transfer;
       }),
     ship: managerProcedure.input(z.object({ transferId: z.number().int().positive() }))
       .mutation(async ({ ctx, input }) => {
         const transfer = await getStockTransfer(input.transferId);
         if (!transfer) throw new TRPCError({ code: "NOT_FOUND", message: "Stock transfer was not found" });
-        if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, transfer.sourceLocationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to the source location" });
+        await requireLocationAccess(ctx, transfer.sourceLocationId, "You are not assigned to the source location");
         await shipStockTransfer(input.transferId, ctx.staff.userId);
         await appendAuditLog({ userId: ctx.staff.userId, locationId: transfer.sourceLocationId, action: "transfer.shipped", entityType: "stock_transfer", entityId: input.transferId, metadata: { destinationLocationId: transfer.destinationLocationId } });
         return { success: true };
@@ -515,7 +553,7 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const transfer = await getStockTransfer(input.transferId);
         if (!transfer) throw new TRPCError({ code: "NOT_FOUND", message: "Stock transfer was not found" });
-        if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, transfer.destinationLocationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to the destination location" });
+        await requireLocationAccess(ctx, transfer.destinationLocationId, "You are not assigned to the destination location");
         await receiveStockTransfer(input.transferId, ctx.staff.userId);
         await appendAuditLog({ userId: ctx.staff.userId, locationId: transfer.destinationLocationId, action: "transfer.received", entityType: "stock_transfer", entityId: input.transferId, metadata: { sourceLocationId: transfer.sourceLocationId } });
         return { success: true };
@@ -526,7 +564,7 @@ export const appRouter = router({
         if (!transfer) throw new TRPCError({ code: "NOT_FOUND", message: "Stock transfer was not found" });
         const canAccessSource = await hasLocationAccess(ctx.staff.userId, ctx.staff.role, transfer.sourceLocationId);
         const canAccessDestination = await hasLocationAccess(ctx.staff.userId, ctx.staff.role, transfer.destinationLocationId);
-        if (!canAccessSource && !canAccessDestination) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this transfer" });
+        if (!canAccessSource && !canAccessDestination) denyLocationAccess(ctx, transfer.sourceLocationId, "transfer_assignment", "You are not assigned to this transfer");
         await cancelStockTransfer(input.transferId);
         await appendAuditLog({ userId: ctx.staff.userId, locationId: transfer.sourceLocationId, action: "transfer.cancelled", entityType: "stock_transfer", entityId: input.transferId, metadata: { destinationLocationId: transfer.destinationLocationId } });
         return { success: true };
@@ -535,7 +573,7 @@ export const appRouter = router({
   checkout: router({
     quote: staffProcedure.input(z.object({ locationId: z.number().int().positive(), memberId: z.number().int().positive().optional(), discountAmount: phpAmountSchema.optional(), lines: checkoutLinesSchema }))
       .mutation(async ({ ctx, input }) => {
-        if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, input.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this location" });
+        await requireLocationAccess(ctx, input.locationId);
         return quoteCheckout(input);
       }),
     complete: staffProcedure.input(z.object({
@@ -543,7 +581,7 @@ export const appRouter = router({
       memberId: z.number().int().positive().optional(), paymentMethod: paymentMethodSchema, amountTendered: phpAmountSchema.optional(), discountAmount: phpAmountSchema.optional(), mockPaymentOutcome: z.enum(["success", "failed"]).optional(),
       paymentReference: z.string().trim().min(2).max(120).optional(), idempotencyKey: z.string().trim().min(12).max(128), lines: checkoutLinesSchema,
     })).mutation(async ({ ctx, input }) => {
-      if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, input.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this location" });
+      await requireLocationAccess(ctx, input.locationId);
       try {
         return await completeCheckout({ ...input, cashierId: ctx.staff.userId });
       } catch (error) {
@@ -554,7 +592,7 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const sale = await getSaleAccessInfo(input.saleId);
         if (!sale) throw new TRPCError({ code: "NOT_FOUND", message: "Sale was not found" });
-        if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, sale.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this sale location" });
+        await requireLocationAccess(ctx, sale.locationId, "You are not assigned to this sale location");
         try {
           const result = await voidCompletedSale({ saleId: input.saleId, voidedById: ctx.staff.userId, reason: input.reason });
           await appendAuditLog({ userId: ctx.staff.userId, locationId: sale.locationId, action: "sale.voided", entityType: "sale", entityId: input.saleId, metadata: { reasonProvided: true } });
@@ -567,11 +605,17 @@ export const appRouter = router({
       .query(async ({ ctx, input }) => {
         const receipt = await getDigitalReceipt(input.receiptNumber);
         if (!receipt) throw new TRPCError({ code: "NOT_FOUND", message: "Receipt was not found" });
-        if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, receipt.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this receipt location" });
+        await requireLocationAccess(ctx, receipt.locationId, "You are not assigned to this receipt location");
         return receipt;
       }),
   }),
   returns: router({
+    get: managerProcedure.input(z.object({ saleId: z.number().int().positive() })).query(async ({ ctx, input }) => {
+      const sale = await getReturnableSale(input.saleId);
+      if (!sale) throw new TRPCError({ code: "NOT_FOUND", message: "Sale was not found" });
+      await requireLocationAccess(ctx, sale.locationId, "You are not assigned to this sale location");
+      return sale;
+    }),
     process: managerProcedure.input(z.object({
       saleId: z.number().int().positive(), cashSessionId: z.number().int().positive().optional(),
       reasonCode: z.enum(["customer_change_mind", "damaged", "wrong_item", "pricing_error", "other"]), reasonNote: z.string().trim().min(3).max(500).optional(),
@@ -579,7 +623,7 @@ export const appRouter = router({
     })).mutation(async ({ ctx, input }) => {
       const sale = await getSaleAccessInfo(input.saleId);
       if (!sale) throw new TRPCError({ code: "NOT_FOUND", message: "Sale was not found" });
-      if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, sale.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this sale location" });
+      await requireLocationAccess(ctx, sale.locationId, "You are not assigned to this sale location");
       try {
         const result = await processPartialReturn({ ...input, processedById: ctx.staff.userId, approvedById: ctx.staff.userId });
         await appendAuditLog({ userId: ctx.staff.userId, locationId: result.locationId, action: "sale.returned", entityType: "sale_return", entityId: result.returnId, metadata: { saleId: input.saleId, reasonCode: input.reasonCode, refundMethod: input.refundMethod, lineCount: input.items.length } });
@@ -608,9 +652,7 @@ export const appRouter = router({
         }),
       )
       .mutation(async ({ ctx, input }) => {
-        if (input.joinedLocationId && !(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, input.joinedLocationId))) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this location" });
-        }
+        if (input.joinedLocationId) await requireLocationAccess(ctx, input.joinedLocationId);
         const passwordHash = await hashPassword(input.password);
         return createLoyaltyMember({ ...input, passwordHash });
       }),

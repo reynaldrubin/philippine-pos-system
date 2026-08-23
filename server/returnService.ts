@@ -69,3 +69,19 @@ export async function processPartialReturn(input: PartialReturnInput) {
     return { returnId, returnNumber, locationId: sale.locationId, refundAmount };
   });
 }
+
+export async function getReturnableSale(saleId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const saleRows = await db.select({ id: sales.id, receiptNumber: sales.receiptNumber, locationId: sales.locationId, status: sales.status, totalAmount: sales.totalAmount, createdAt: sales.createdAt })
+    .from(sales).where(eq(sales.id, saleId)).limit(1);
+  const sale = saleRows[0];
+  if (!sale) return undefined;
+  const sourceItems = await db.select({ id: saleItems.id, productId: saleItems.productId, skuSnapshot: saleItems.skuSnapshot, nameSnapshot: saleItems.nameSnapshot, quantity: saleItems.quantity, lineTotal: saleItems.lineTotal })
+    .from(saleItems).where(eq(saleItems.saleId, saleId));
+  const priorReturns = await db.select({ saleItemId: saleReturnItems.saleItemId, quantity: saleReturnItems.quantity })
+    .from(saleReturnItems).innerJoin(saleReturns, eq(saleReturnItems.returnId, saleReturns.id)).where(eq(saleReturns.saleId, saleId));
+  const returnedByItem = new Map<number, number>();
+  priorReturns.forEach(item => returnedByItem.set(item.saleItemId, (returnedByItem.get(item.saleItemId) ?? 0) + Number(item.quantity)));
+  return { ...sale, items: sourceItems.map(item => ({ ...item, returnedQuantity: String(returnedByItem.get(item.id) ?? 0), availableQuantity: String(Number(item.quantity) - (returnedByItem.get(item.id) ?? 0)) })) };
+}
