@@ -43,6 +43,8 @@
 - [x] Add router-level successful-login regressions proving staff and member sessions clear stale persistent throttle records before the next failed attempt.
 - [ ] Build cash-control enhancements including denomination-based close counts, safe drops, variance explanations, and manager approval thresholds.
 - [ ] Build partial returns and exchanges with reason codes, manager authorization, stock restoration, payment/refund tracking, and immutable sales links.
+- [x] Link an optional one-to-one replacement checkout to a completed same-location return through the immutable exchange-sale reference.
+- [ ] Complete the guided exchange workflow with replacement-sale validation, net-difference operational handling, and end-to-end exchange-path regression coverage.
 - [x] Add cash-control schema and service foundations for denomination counts, pending safe drops, explanation-gated material cash variances, and distinct-manager variance approval.
 - [x] Add manager-authorized partial-return API and immutable schema records for reason codes, proportional PHP refunds, refund references, and stock restoration movements.
 - [x] Add PHP centavo calculation coverage for denomination counting, material-variance thresholds, and partial-return proration limits.

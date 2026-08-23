@@ -579,7 +579,7 @@ export const appRouter = router({
     complete: staffProcedure.input(z.object({
       locationId: z.number().int().positive(), registerId: z.number().int().positive(), cashSessionId: z.number().int().positive(),
       memberId: z.number().int().positive().optional(), paymentMethod: paymentMethodSchema, amountTendered: phpAmountSchema.optional(), discountAmount: phpAmountSchema.optional(), mockPaymentOutcome: z.enum(["success", "failed"]).optional(),
-      paymentReference: z.string().trim().min(2).max(120).optional(), idempotencyKey: z.string().trim().min(12).max(128), lines: checkoutLinesSchema,
+      paymentReference: z.string().trim().min(2).max(120).optional(), exchangeReturnId: z.number().int().positive().optional(), idempotencyKey: z.string().trim().min(12).max(128), lines: checkoutLinesSchema,
     })).mutation(async ({ ctx, input }) => {
       await requireLocationAccess(ctx, input.locationId);
       try {

@@ -33,7 +33,7 @@ The Drizzle definitions in `drizzle/schema.ts` are the authoritative schema sour
 | `saleItems` | Product line quantities, pricing snapshots, discounts, and tax | Tied to the sale for receipt integrity |
 | `payments` | Mock payment method, authorization result, PHP paid/change values | Supports Cash, GCash, Maya, QR Ph, debit, credit, and bank transfer |
 | `receipts` | Digital receipt number and immutable presentation data | Retrieved with cashier, member, payment, tax, and item information |
-| `saleReturns` | Immutable partial-return header linked to its original completed sale | Stores manager authorization, reason, refund method, and total refund amount |
+| `saleReturns` | Immutable partial-return header linked to its original completed sale | Stores manager authorization, reason, refund method, total refund amount, and optional one-to-one replacement sale for exchanges |
 | `saleReturnItems` | Returned original sale lines and quantities | Caps cumulative returned quantity through service validation; restores inventory via a new movement |
 | `returnPayments` | Refund payment ledger | Keeps a separate refund reference rather than overwriting an original payment |
 

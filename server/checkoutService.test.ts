@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { receipts, sales, stockMovements } from "../drizzle/schema";
+import { receipts, saleReturns, sales, stockMovements } from "../drizzle/schema";
 
 const dbMocks = vi.hoisted(() => ({ getDb: vi.fn() }));
 vi.mock("./db", () => dbMocks);
@@ -7,9 +7,11 @@ vi.mock("./db", () => dbMocks);
 import { completeCheckout, voidCompletedSale } from "./checkoutService";
 
 type InsertedRow = { table: unknown; values: unknown };
+type UpdatedRow = { table: unknown; values: unknown };
 
 function createCheckoutDb(selectResults: unknown[][]) {
   const inserted: InsertedRow[] = [];
+  const updated: UpdatedRow[] = [];
   let selectIndex = 0;
   const transactionDb: any = {
     select: () => {
@@ -30,8 +32,9 @@ function createCheckoutDb(selectResults: unknown[][]) {
         };
       },
     }),
-    update: () => {
-      const chain: any = { set: () => chain, where: async () => [{ affectedRows: 1 }] };
+    update: (table: unknown) => {
+      let values: unknown;
+      const chain: any = { set: (nextValues: unknown) => { values = nextValues; return chain; }, where: async () => { updated.push({ table, values }); return [{ affectedRows: 1 }]; } };
       return chain;
     },
   };
@@ -42,7 +45,7 @@ function createCheckoutDb(selectResults: unknown[][]) {
     },
     transaction: async (callback: (tx: unknown) => Promise<unknown>) => callback(transactionDb),
   };
-  return { rootDb, inserted };
+  return { rootDb, inserted, updated };
 }
 
 function checkoutSelectResults() {
@@ -105,5 +108,35 @@ describe("checkout service transaction behavior", () => {
     expect(inserted.find(entry => entry.table === stockMovements)?.values).toMatchObject({
       locationId: 3, productId: 9, quantityDelta: "1", movementType: "void", referenceType: "sale_void", referenceId: 91,
     });
+  });
+
+  it("links a completed same-location return to exactly one replacement sale in the checkout transaction", async () => {
+    const { rootDb, updated } = createCheckoutDb([
+      [{ id: 3, code: "MNL-01", name: "Manila Store", isActive: true }],
+      [{ id: 4, code: "POS-01", name: "Counter 1", isActive: true }],
+      [{ id: 8, status: "open", registerId: 4 }],
+      [{ id: 301, locationId: 3, status: "completed", exchangeSaleId: null }],
+      [{ inventoryQuantity: "10.000", priceOverride: null, productId: 9, sku: "SKU-9", name: "Coffee", price: "100.00", taxRate: "0.12", isTaxInclusive: false, isActive: true }],
+      [{ id: 44, name: "Ana Santos", email: "ana@example.com", isActive: true }],
+      [],
+    ]);
+    dbMocks.getDb.mockResolvedValue(rootDb);
+    const result = await completeCheckout({ locationId: 3, registerId: 4, cashSessionId: 8, cashierId: 44, paymentMethod: "cash", amountTendered: "120.00", exchangeReturnId: 301, idempotencyKey: "exchange-link-checkout-test-0001", lines: [{ productId: 9, quantity: "1" }] });
+    expect(result.receipt).toMatchObject({ exchange: { returnId: 301 } });
+    expect(updated.find(entry => entry.table === saleReturns)?.values).toEqual({ exchangeSaleId: result.saleId });
+  });
+
+  it("rejects exchange returns from a different location or returns already linked to a replacement sale", async () => {
+    for (const exchangeReturn of [{ id: 301, locationId: 4, status: "completed", exchangeSaleId: null }, { id: 301, locationId: 3, status: "completed", exchangeSaleId: 92 }]) {
+      const { rootDb, inserted } = createCheckoutDb([
+        [{ id: 3, code: "MNL-01", name: "Manila Store", isActive: true }],
+        [{ id: 4, code: "POS-01", name: "Counter 1", isActive: true }],
+        [{ id: 8, status: "open", registerId: 4 }],
+        [exchangeReturn],
+      ]);
+      dbMocks.getDb.mockResolvedValue(rootDb);
+      await expect(completeCheckout({ locationId: 3, registerId: 4, cashSessionId: 8, cashierId: 44, paymentMethod: "cash", amountTendered: "120.00", exchangeReturnId: 301, idempotencyKey: `exchange-link-rejection-${exchangeReturn.locationId}-${exchangeReturn.exchangeSaleId ?? "none"}`, lines: [{ productId: 9, quantity: "1" }] })).rejects.toThrow(exchangeReturn.exchangeSaleId ? "already linked" : "not available");
+      expect(inserted).toEqual([]);
+    }
   });
 });

@@ -433,11 +433,12 @@ export const saleReturns = mysqlTable(
     reasonNote: text("reasonNote"),
     refundAmount: decimal("refundAmount", { precision: 14, scale: 2 }).notNull(),
     refundMethod: mysqlEnum("refundMethod", ["cash", "gcash", "maya", "qrph", "debit_card", "credit_card", "bank_transfer"]).notNull(),
+    exchangeSaleId: int("exchangeSaleId").references(() => sales.id, { onDelete: "restrict" }),
     processedById: int("processedById").notNull().references(() => users.id, { onDelete: "restrict" }),
     approvedById: int("approvedById").notNull().references(() => users.id, { onDelete: "restrict" }),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
-  table => [index("sale_returns_sale_created_idx").on(table.saleId, table.createdAt), index("sale_returns_location_created_idx").on(table.locationId, table.createdAt)],
+  table => [index("sale_returns_sale_created_idx").on(table.saleId, table.createdAt), index("sale_returns_location_created_idx").on(table.locationId, table.createdAt), uniqueIndex("sale_returns_exchange_sale_unique").on(table.exchangeSaleId)],
 );
 
 export const saleReturnItems = mysqlTable(

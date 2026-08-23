@@ -42,7 +42,7 @@ An authenticated project owner may initialize the first Admin password only whil
 
 ## Daily store workflow
 
-Open the **Operations** workspace, select an assigned location, create or select a register, and open a cash session with its opening float. Cashiers process eligible sales from **Register**. The service layer now supports denomination-count capture and explanation-gated material variances; a variance of at least ₱100 enters a pending approval state and must be approved by a different Manager or Admin. Safe drops are recorded as pending and are designed for separate-manager review before they reduce expected cash. The full cash-control interface is the next operational UX increment.
+Open the **Operations** workspace, select an assigned location, create or select a register, and open a cash session with its opening float. Cashiers process eligible sales from **Register**. Managers and Admins use **Cash controls** to save a PHP denomination count, submit or review safe drops, and review pending material variances. Use **Close cash session** to enter the final cash total; a difference of at least ₱100 requires a written explanation and remains pending approval by a different Manager or Admin. Approved safe drops reduce expected cash only after the separate review is recorded.
 
 The supported mock payment methods are Cash, GCash, Maya, QR Ph, debit card, credit card, and bank transfer. Checkout validates stock, produces a digital receipt, records payment data, decrements stock, appends a stock movement, and completes loyalty earning atomically. A void restores inventory and appends the corresponding loyalty reversal; historical ledger entries are never edited or deleted.
 
@@ -66,7 +66,7 @@ Admins manage locations from **Operations**, including real active/inactive stat
 
 Admins can open **Fiscal & audit** to manage business profiles, tax-registration references, location invoice series, receipt-device records, issued fiscal document history, and privacy-aware audit events. An active invoice series is optionally issued inside a completed checkout transaction. This is readiness data and controlled sequencing only: it is **not** a representation of BIR certification, EIS submission, or compliance approval.
 
-Manager-authorized partial return processing is available through the protected API foundation. It creates a distinct return header, return items, refund-payment record, and inventory-restoration movement without editing the original completed sale or payment. A dedicated staff return/exchange interface and proportional loyalty reversal policy remain pending operational UX work.
+Managers and Admins use **Partial returns** to retrieve an original completed sale, choose remaining eligible quantities, document a reason, select a mock refund method, and complete an immutable return. The transaction creates a distinct return header, return items, refund-payment record, and inventory-restoration movement without editing the original completed sale or payment. After completion, the workspace can hand off to a **linked replacement sale** in Register. That checkout is limited to the same location and one replacement sale per return. Register displays the already-recorded refund, replacement total, and resulting net difference; the refund and replacement payment remain separate immutable financial records.
 
 ## Validation status
 

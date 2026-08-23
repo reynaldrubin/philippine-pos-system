@@ -13,6 +13,7 @@ import {
   products,
   receipts,
   registers,
+  saleReturns,
   saleItems,
   sales,
   stockMovements,
@@ -44,6 +45,7 @@ export type CheckoutRequest = {
   paymentReference?: string;
   discountAmount?: string;
   mockPaymentOutcome?: "success" | "failed";
+  exchangeReturnId?: number;
   idempotencyKey: string;
   lines: Array<{ productId: number; quantity: string }>;
 };
@@ -190,6 +192,13 @@ export async function completeCheckout(input: CheckoutRequest) {
       .from(cashSessions).where(eq(cashSessions.id, input.cashSessionId)).limit(1);
     if (!session[0] || session[0].status !== "open" || session[0].registerId !== input.registerId) throw new Error("An open cash session is required for this register");
 
+    if (input.exchangeReturnId) {
+      const exchangeReturn = await tx.select({ id: saleReturns.id, locationId: saleReturns.locationId, status: saleReturns.status, exchangeSaleId: saleReturns.exchangeSaleId })
+        .from(saleReturns).where(eq(saleReturns.id, input.exchangeReturnId)).limit(1).for("update");
+      if (!exchangeReturn[0] || exchangeReturn[0].status !== "completed" || exchangeReturn[0].locationId !== input.locationId) throw new Error("Exchange return is not available at the selected location");
+      if (exchangeReturn[0].exchangeSaleId) throw new Error("This return is already linked to a replacement sale");
+    }
+
     const quote = applyDiscount(await buildQuote(tx, input), input.discountAmount);
     const cashier = await tx.select({ id: users.id, name: users.name, email: users.email, isActive: users.isActive }).from(users).where(eq(users.id, input.cashierId)).limit(1);
     if (!cashier[0] || !cashier[0].isActive) throw new Error("Cashier account is unavailable");
@@ -218,6 +227,7 @@ export async function completeCheckout(input: CheckoutRequest) {
       qualifyingAmount: centavosToDecimal(quote.qualifyingCentavos), pointsEarned: input.memberId ? quote.pointsEarned : 0, idempotencyKey: input.idempotencyKey,
     });
     const saleId = Number(saleResult.insertId);
+    if (input.exchangeReturnId) await tx.update(saleReturns).set({ exchangeSaleId: saleId }).where(eq(saleReturns.id, input.exchangeReturnId));
 
     const activeSeriesRows = await tx.select({ id: invoiceSeries.id, prefix: invoiceSeries.prefix, nextSequence: invoiceSeries.nextSequence, numberPadding: invoiceSeries.numberPadding })
       .from(invoiceSeries).where(and(eq(invoiceSeries.locationId, input.locationId), eq(invoiceSeries.isActive, true))).orderBy(invoiceSeries.id).limit(1).for("update");
@@ -284,6 +294,7 @@ export async function completeCheckout(input: CheckoutRequest) {
         method: input.paymentMethod, amountTendered: centavosToDecimal(payment.amountTenderedCentavos), changeAmount: centavosToDecimal(payment.changeCentavos), reference,
       }, loyalty: { pointsEarned: input.memberId ? quote.pointsEarned : 0, pointsBalance },
       fiscal: fiscalDocument ? { ...fiscalDocument, status: "issued" } : null,
+      exchange: input.exchangeReturnId ? { returnId: input.exchangeReturnId } : null,
     };
     await tx.insert(receipts).values({ saleId, receiptNumber, content: receiptContent });
     return { saleId, receiptNumber, replayed: false, receipt: receiptContent };
