@@ -571,18 +571,24 @@ export async function closeCashSession(input: { cashSessionId: number; closedByI
   return { expectedCash: expectedCash.toFixed(2), closingCash: countedCash.toFixed(2), variance, varianceApprovalStatus: requiresApproval ? "pending" : "not_required" };
 }
 
+export async function upsertCashCountEntries(tx: any, input: { cashSessionId: number; countedById: number; entries: DenominationCount[] }) {
+  const count = calculateDenominationCount(input.entries);
+  await tx.insert(cashCountEntries).values(count.entries.map(entry => ({ cashSessionId: input.cashSessionId, denomination: entry.denomination, quantity: entry.quantity, countedAmount: entry.countedAmount, countedById: input.countedById }))).onDuplicateKeyUpdate({
+    set: { quantity: sql`values(${cashCountEntries.quantity})`, countedAmount: sql`values(${cashCountEntries.countedAmount})`, countedById: sql`values(${cashCountEntries.countedById})` },
+  });
+  return count;
+}
+
 export async function recordCashCount(input: { cashSessionId: number; countedById: number; entries: DenominationCount[] }) {
   const db = await getDb();
   if (!db) throw new Error("Database is unavailable");
-  const count = calculateDenominationCount(input.entries);
+  let count: ReturnType<typeof calculateDenominationCount> | undefined;
   await db.transaction(async tx => {
     const session = await tx.select({ id: cashSessions.id, status: cashSessions.status }).from(cashSessions).where(eq(cashSessions.id, input.cashSessionId)).limit(1).for("update");
     if (!session[0] || session[0].status !== "open") throw new Error("Cash session is not available for a count");
-    await tx.insert(cashCountEntries).values(count.entries.map(entry => ({ cashSessionId: input.cashSessionId, denomination: entry.denomination, quantity: entry.quantity, countedAmount: entry.countedAmount, countedById: input.countedById }))).onDuplicateKeyUpdate({
-      set: { quantity: sql`values(${cashCountEntries.quantity})`, countedAmount: sql`values(${cashCountEntries.countedAmount})`, countedById: sql`values(${cashCountEntries.countedById})` },
-    });
+    count = await upsertCashCountEntries(tx, input);
   });
-  return count;
+  return count!;
 }
 
 export async function createCashSafeDrop(input: { cashSessionId: number; locationId: number; amount: string; reason: string; createdById: number }) {
@@ -615,12 +621,16 @@ export async function reviewCashSafeDrop(input: { safeDropId: number; approvedBy
     const drops = await tx.select().from(cashSafeDrops).where(eq(cashSafeDrops.id, input.safeDropId)).limit(1).for("update");
     const drop = drops[0];
     if (!drop || drop.status !== "pending") throw new Error("Safe drop is not pending review");
-    if (drop.createdById === input.approvedById) throw new Error("A safe drop must be reviewed by a different staff member");
+    assertIndependentCashReviewer(drop.createdById, input.approvedById, "safe drop");
     const status = input.approve ? "approved" : "rejected";
     await tx.update(cashSafeDrops).set({ status, approvedById: input.approvedById, approvedAt: new Date() }).where(eq(cashSafeDrops.id, drop.id));
     if (input.approve) await tx.update(cashSessions).set({ expectedCash: sql`${cashSessions.expectedCash} - ${drop.amount}` }).where(and(eq(cashSessions.id, drop.cashSessionId), eq(cashSessions.status, "open")));
     return { locationId: drop.locationId, status };
   });
+}
+
+export function assertIndependentCashReviewer(originatorId: number | null, reviewerId: number, subject: "safe drop" | "cash variance") {
+  if (originatorId === reviewerId) throw new Error(`A ${subject} must be approved by a different staff member`);
 }
 
 export async function approveCashVariance(input: { cashSessionId: number; approvedById: number }) {
@@ -629,7 +639,7 @@ export async function approveCashVariance(input: { cashSessionId: number; approv
   const rows = await db.select({ id: cashSessions.id, closedById: cashSessions.closedById, status: cashSessions.status, variance: cashSessions.variance, approval: cashSessions.varianceApprovalStatus }).from(cashSessions).where(eq(cashSessions.id, input.cashSessionId)).limit(1);
   const session = rows[0];
   if (!session || session.status !== "closed" || session.approval !== "pending") throw new Error("Cash session does not require variance approval");
-  if (session.closedById === input.approvedById) throw new Error("A cash variance must be approved by a different staff member");
+  assertIndependentCashReviewer(session.closedById, input.approvedById, "cash variance");
   await db.update(cashSessions).set({ varianceApprovalStatus: "approved", varianceApprovedById: input.approvedById, varianceApprovedAt: new Date() }).where(eq(cashSessions.id, session.id));
   return { variance: session.variance };
 }

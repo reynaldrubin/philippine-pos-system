@@ -2,7 +2,8 @@ import { formatPHP } from "@/lib/currency";
 import { usePosStore } from "@/stores/posStore";
 import { trpc } from "@/lib/trpc";
 import { CheckCircle2, CreditCard, Minus, Plus, Search, Trash2, UserRoundPlus, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { parseExchangeHandoff } from "../../../shared/exchangeHandoff";
 
 const paymentLabels = { cash: "Cash", gcash: "GCash", maya: "Maya", qrph: "QR Ph", debit_card: "Debit card", credit_card: "Credit card", bank_transfer: "Bank transfer" } as const;
 type PaymentMethod = keyof typeof paymentLabels;
@@ -13,8 +14,9 @@ export default function Register() {
   const [search, setSearch] = useState(""); const [memberTerm, setMemberTerm] = useState(""); const [memberLookupEnabled, setMemberLookupEnabled] = useState(false);
   const [registerId, setRegisterId] = useState<number | null>(null); const [cashSessionId, setCashSessionId] = useState<number | null>(null); const [openingCash, setOpeningCash] = useState("0.00");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash"); const [tendered, setTendered] = useState(""); const [discountAmount, setDiscountAmount] = useState("0.00"); const [receipt, setReceipt] = useState<any>(null);
-  const exchangeReturnId = useMemo(() => { const value = new URLSearchParams(window.location.search).get("exchangeReturnId"); const id = Number(value); return Number.isInteger(id) && id > 0 ? id : undefined; }, []);
-  const exchangeRefundAmount = useMemo(() => { const value = Number(new URLSearchParams(window.location.search).get("exchangeRefundAmount")); return Number.isFinite(value) && value >= 0 ? value : 0; }, []);
+  const exchange = useMemo(() => parseExchangeHandoff(window.location.search), []);
+  const exchangeReturnId = exchange?.returnId;
+  const exchangeRefundAmount = exchange?.refundAmount ?? 0;
   const inventory = trpc.inventory.list.useQuery({ locationId: activeLocationId ?? 0, search: search || undefined }, { enabled: Boolean(activeLocationId), retry: false });
   const registers = trpc.locations.registers.useQuery({ locationId: activeLocationId ?? 0 }, { enabled: Boolean(activeLocationId), retry: false });
   const sessions = trpc.cashSessions.list.useQuery({ locationId: activeLocationId ?? 0 }, { enabled: Boolean(activeLocationId), retry: false });

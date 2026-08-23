@@ -41,19 +41,25 @@
 - [x] Replace the in-memory login throttle with a persistent multi-instance rate-limit store keyed by identifier and request source with expiry.
 - [x] Add router-level regressions proving staff and member repeated login failures return `TOO_MANY_REQUESTS` and success clears the rate-limit state.
 - [x] Add router-level successful-login regressions proving staff and member sessions clear stale persistent throttle records before the next failed attempt.
-- [ ] Build cash-control enhancements including denomination-based close counts, safe drops, variance explanations, and manager approval thresholds.
-- [ ] Build partial returns and exchanges with reason codes, manager authorization, stock restoration, payment/refund tracking, and immutable sales links.
+- [x] Build cash-control enhancements including denomination-based close counts, safe drops, variance explanations, and manager approval thresholds.
+- [x] Build partial returns and exchanges with reason codes, manager authorization, stock restoration, payment/refund tracking, and immutable sales links.
 - [x] Link an optional one-to-one replacement checkout to a completed same-location return through the immutable exchange-sale reference.
-- [ ] Complete the guided exchange workflow with replacement-sale validation, net-difference operational handling, and end-to-end exchange-path regression coverage.
+- [x] Complete the guided exchange workflow with replacement-sale validation, net-difference operational handling, and end-to-end exchange-path regression coverage.
+- [x] Add an integrated return-to-replacement workflow regression verifying the persisted one-to-one exchange link, refund amount, and replacement net-difference context.
+- [x] Extend the integrated exchange workflow regression with carried refund and replacement quote net-difference assertions in one test journey.
+- [x] Extract and exercise the actual return-to-Register handoff context in the integrated exchange regression before completion.
+- [x] Add Register component coverage proving a linked exchange quote displays the computed replacement net difference after the recorded refund.
 - [x] Add cash-control schema and service foundations for denomination counts, pending safe drops, explanation-gated material cash variances, and distinct-manager variance approval.
 - [x] Add manager-authorized partial-return API and immutable schema records for reason codes, proportional PHP refunds, refund references, and stock restoration movements.
 - [x] Add PHP centavo calculation coverage for denomination counting, material-variance thresholds, and partial-return proration limits.
 - [x] Build a manager/Admin Cash Controls workspace for denomination counts, safe-drop review, and pending material-variance approvals.
-- [ ] Add Operations close-session variance-explanation input and clear material-variance feedback.
-- [ ] Make denomination count submissions idempotent or explicitly editable for a cash session.
-- [ ] Add cash-control service/router regressions for material close variance, recount behavior, safe-drop review, and distinct-manager variance approval.
+- [x] Replace the legacy Operations inline close action with a guided Cash Close handoff that requires material-variance explanations and clearly signals independent approval.
+- [x] Make denomination count submissions idempotent or explicitly editable for a cash session.
+- [x] Add cash-control service/router regressions for material close variance, recount behavior, safe-drop review, and distinct-manager variance approval.
+- [x] Add a negative regression proving self-approval is rejected for a material cash variance and, where relevant, safe-drop review.
 - [ ] Add operational reporting and workflow UI for the new audit, fiscal, cash-control, and return/exchange capabilities.
 - [ ] Add comprehensive regression coverage, run migrations, validate builds, and document each enhancement for operations.
+- [ ] Add focused operational report panels and regressions for fiscal document activity, audit activity, cash-control review queues, and return/exchange activity.
 
 - [x] Rebuild the current managed Vite/tRPC/Drizzle/MySQL foundation into a strict Next.js, Express, Prisma, and PostgreSQL architecture while preserving the approved business requirements. Superseded by the user-approved managed stack.
 - [x] Configure the required PostgreSQL connection string securely and validate it through the strict-stack Prisma configuration. Superseded by the user-approved managed stack.

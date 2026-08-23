@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { cashSessions, locationInventory, payments, registers, returnPayments, saleItems, saleReturnItems, saleReturns, sales, stockMovements } from "../drizzle/schema";
 import { centavosToDecimal, decimalToCentavos, type PaymentMethod } from "./checkoutRules";
 import { getDb } from "./db";
@@ -84,4 +84,14 @@ export async function getReturnableSale(saleId: number) {
   const returnedByItem = new Map<number, number>();
   priorReturns.forEach(item => returnedByItem.set(item.saleItemId, (returnedByItem.get(item.saleItemId) ?? 0) + Number(item.quantity)));
   return { ...sale, items: sourceItems.map(item => ({ ...item, returnedQuantity: String(returnedByItem.get(item.id) ?? 0), availableQuantity: String(Number(item.quantity) - (returnedByItem.get(item.id) ?? 0)) })) };
+}
+
+export async function listRecentReturns(locationId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: saleReturns.id, returnNumber: saleReturns.returnNumber, saleId: saleReturns.saleId, originalReceiptNumber: sales.receiptNumber,
+    refundAmount: saleReturns.refundAmount, refundMethod: saleReturns.refundMethod, reasonCode: saleReturns.reasonCode,
+    exchangeSaleId: saleReturns.exchangeSaleId, createdAt: saleReturns.createdAt,
+  }).from(saleReturns).innerJoin(sales, eq(saleReturns.saleId, sales.id)).where(eq(saleReturns.locationId, locationId)).orderBy(desc(saleReturns.createdAt)).limit(50);
 }

@@ -6,7 +6,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, publicProcedure, router } from "./_core/trpc";
 import { hashPassword, issueMemberAccessToken, issueStaffAccessToken, verifyPassword } from "./authTokens";
 import { completeCheckout, getDigitalReceipt, getSaleAccessInfo, quoteCheckout, voidCompletedSale } from "./checkoutService";
-import { getReturnableSale, processPartialReturn } from "./returnService";
+import { getReturnableSale, listRecentReturns, processPartialReturn } from "./returnService";
 import {
   adjustLocationInventory,
   assignUserToLocation,
@@ -610,6 +610,10 @@ export const appRouter = router({
       }),
   }),
   returns: router({
+    recent: managerProcedure.input(z.object({ locationId: z.number().int().positive() })).query(async ({ ctx, input }) => {
+      await requireLocationAccess(ctx, input.locationId, "You are not assigned to this return location");
+      return listRecentReturns(input.locationId);
+    }),
     get: managerProcedure.input(z.object({ saleId: z.number().int().positive() })).query(async ({ ctx, input }) => {
       const sale = await getReturnableSale(input.saleId);
       if (!sale) throw new TRPCError({ code: "NOT_FOUND", message: "Sale was not found" });
