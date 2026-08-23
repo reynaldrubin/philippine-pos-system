@@ -29,13 +29,20 @@
 - [x] Produce a prioritized enhancement roadmap covering product features, technical architecture, UI/UX, visual design, testing, and operations.
 
 - [ ] Add immutable, privacy-aware audit events for authentication, authorization failures, staff administration, inventory configuration, transfers, voids, loyalty adjustments, and fiscal configuration changes.
-- [ ] Add configurable fiscal business profiles, tax registrations, invoice series, receipt-device registration data, and sequential invoice-number allocation without claiming BIR compliance.
+- [ ] Add privacy-aware audit logging for authorization denials across protected Admin, Manager, staff, and member procedures without exposing sensitive identifiers or credentials.
+- [ ] Add regression tests proving denied authorization attempts emit sanitized audit events.
+- [x] Add configurable fiscal business profiles, tax registrations, invoice series, receipt-device registration data, and sequential invoice-number allocation without claiming BIR compliance.
+- [x] Optionally issue an active location invoice-series document in the same completed-checkout transaction and surface its sequential number in the receipt payload.
+- [x] Build an Admin-only Fiscal & Audit workspace for configuration, issued-document history, and privacy-aware operational audit review, with an explicit non-certification notice.
 - [x] Add production-oriented authentication hardening: login rate limits, active-member revalidation, and high-risk activity audit events.
 - [x] Replace the in-memory login throttle with a persistent multi-instance rate-limit store keyed by identifier and request source with expiry.
 - [x] Add router-level regressions proving staff and member repeated login failures return `TOO_MANY_REQUESTS` and success clears the rate-limit state.
 - [x] Add router-level successful-login regressions proving staff and member sessions clear stale persistent throttle records before the next failed attempt.
 - [ ] Build cash-control enhancements including denomination-based close counts, safe drops, variance explanations, and manager approval thresholds.
 - [ ] Build partial returns and exchanges with reason codes, manager authorization, stock restoration, payment/refund tracking, and immutable sales links.
+- [x] Add cash-control schema and service foundations for denomination counts, pending safe drops, explanation-gated material cash variances, and distinct-manager variance approval.
+- [x] Add manager-authorized partial-return API and immutable schema records for reason codes, proportional PHP refunds, refund references, and stock restoration movements.
+- [x] Add PHP centavo calculation coverage for denomination counting, material-variance thresholds, and partial-return proration limits.
 - [ ] Add operational reporting and workflow UI for the new audit, fiscal, cash-control, and return/exchange capabilities.
 - [ ] Add comprehensive regression coverage, run migrations, validate builds, and document each enhancement for operations.
 

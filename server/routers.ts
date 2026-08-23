@@ -6,18 +6,25 @@ import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, publicProcedure, router } from "./_core/trpc";
 import { hashPassword, issueMemberAccessToken, issueStaffAccessToken, verifyPassword } from "./authTokens";
 import { completeCheckout, getDigitalReceipt, getSaleAccessInfo, quoteCheckout, voidCompletedSale } from "./checkoutService";
+import { processPartialReturn } from "./returnService";
 import {
   adjustLocationInventory,
   assignUserToLocation,
   cancelStockTransfer,
   closeCashSession,
+  recordCashCount,
+  approveCashVariance,
   createCategory,
+  createBusinessProfile,
+  createInvoiceSeries,
   createLoyaltyMember,
   createLocation,
   createProduct,
   createRegister,
+  createReceiptDevice,
   createStaffAccount,
   createStockTransfer,
+  createTaxRegistration,
   getCashSessionWithRegister,
   getCategory,
   getLoyaltyAccountByMemberId,
@@ -38,6 +45,8 @@ import {
   hasLocationAccess,
   hasInitializedAdmin,
   listAllLocations,
+  listBusinessProfiles,
+  listFiscalDocuments,
   listCategories,
   listInventoryForLocation,
   listLocationsForUser,
@@ -45,12 +54,15 @@ import {
   listMemberPurchases,
   listOpenCashSessionsForLocation,
   listLowStockForLocation,
+  listInvoiceSeries,
   listProducts,
   listRegistersForLocation,
+  listReceiptDevices,
   listStaffAssignmentsForLocation,
   listStaffAccounts,
   listStockMovements,
   listStockTransfersForLocation,
+  listTaxRegistrations,
   openCashSession,
   receiveStockTransfer,
   removeUserFromLocation,
@@ -59,11 +71,16 @@ import {
   setStaffPasswordAndAdminRole,
   shipStockTransfer,
   updateCategory,
+  updateBusinessProfile,
+  updateInvoiceSeries,
+  updateReceiptDevice,
   updateLocation,
   updateStaffAccount,
   updateProduct,
+  updateTaxRegistration,
   adjustLoyaltyPoints,
   appendAuditLog,
+  allocateFiscalDocument,
 } from "./db";
 import { adminStaffProcedure, managerProcedure, memberProcedure, staffProcedure } from "./posAuth";
 import { staffMenuKeys, staffRoles } from "../drizzle/schema";
@@ -98,6 +115,67 @@ function loginRequestSource(headers: Record<string, string | string[] | undefine
 
 export const appRouter = router({
   system: systemRouter,
+  fiscal: router({
+    businessProfiles: adminStaffProcedure.query(() => listBusinessProfiles()),
+    createBusinessProfile: adminStaffProcedure.input(z.object({ legalName: z.string().trim().min(2).max(240), tradeName: z.string().trim().max(240).optional(), tin: z.string().trim().min(5).max(32), vatStatus: z.enum(["vat", "non_vat"]), registeredAddress: z.string().trim().min(5).max(2000), invoiceLabel: z.string().trim().min(3).max(80).optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const businessProfileId = await createBusinessProfile(input);
+        await appendAuditLog({ userId: ctx.staff.userId, action: "fiscal.business_profile.created", entityType: "business_profile", entityId: businessProfileId, metadata: { vatStatus: input.vatStatus } });
+        return { businessProfileId };
+      }),
+    updateBusinessProfile: adminStaffProcedure.input(z.object({ businessProfileId: z.number().int().positive(), legalName: z.string().trim().min(2).max(240).optional(), tradeName: z.string().trim().max(240).nullable().optional(), tin: z.string().trim().min(5).max(32).optional(), vatStatus: z.enum(["vat", "non_vat"]).optional(), registeredAddress: z.string().trim().min(5).max(2000).optional(), invoiceLabel: z.string().trim().min(3).max(80).optional(), isActive: z.boolean().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        await updateBusinessProfile(input);
+        await appendAuditLog({ userId: ctx.staff.userId, action: "fiscal.business_profile.updated", entityType: "business_profile", entityId: input.businessProfileId, metadata: { changedFields: Object.keys(input).filter(key => key !== "businessProfileId") } });
+        return { success: true };
+      }),
+    taxRegistrations: adminStaffProcedure.input(z.object({ businessProfileId: z.number().int().positive() })).query(({ input }) => listTaxRegistrations(input.businessProfileId)),
+    createTaxRegistration: adminStaffProcedure.input(z.object({ businessProfileId: z.number().int().positive(), birRdoCode: z.string().trim().max(16).optional(), certificateNumber: z.string().trim().max(80).optional(), effectiveFrom: z.coerce.date().optional(), effectiveTo: z.coerce.date().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const taxRegistrationId = await createTaxRegistration(input);
+        await appendAuditLog({ userId: ctx.staff.userId, action: "fiscal.tax_registration.created", entityType: "tax_registration", entityId: taxRegistrationId, metadata: { businessProfileId: input.businessProfileId } });
+        return { taxRegistrationId };
+      }),
+    updateTaxRegistration: adminStaffProcedure.input(z.object({ taxRegistrationId: z.number().int().positive(), birRdoCode: z.string().trim().max(16).nullable().optional(), certificateNumber: z.string().trim().max(80).nullable().optional(), effectiveFrom: z.coerce.date().nullable().optional(), effectiveTo: z.coerce.date().nullable().optional(), status: z.enum(["active", "inactive"]).optional() }))
+      .mutation(async ({ ctx, input }) => {
+        await updateTaxRegistration(input);
+        await appendAuditLog({ userId: ctx.staff.userId, action: "fiscal.tax_registration.updated", entityType: "tax_registration", entityId: input.taxRegistrationId, metadata: { changedFields: Object.keys(input).filter(key => key !== "taxRegistrationId") } });
+        return { success: true };
+      }),
+    invoiceSeries: adminStaffProcedure.input(z.object({ locationId: z.number().int().positive().optional() }).optional()).query(({ input }) => listInvoiceSeries(input?.locationId)),
+    createInvoiceSeries: adminStaffProcedure.input(z.object({ businessProfileId: z.number().int().positive(), locationId: z.number().int().positive(), code: z.string().trim().min(2).max(32), prefix: z.string().trim().min(1).max(32), nextSequence: z.number().int().positive().optional(), numberPadding: z.number().int().min(3).max(12).optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const invoiceSeriesId = await createInvoiceSeries(input);
+        await appendAuditLog({ userId: ctx.staff.userId, locationId: input.locationId, action: "fiscal.invoice_series.created", entityType: "invoice_series", entityId: invoiceSeriesId, metadata: { code: input.code } });
+        return { invoiceSeriesId };
+      }),
+    updateInvoiceSeries: adminStaffProcedure.input(z.object({ invoiceSeriesId: z.number().int().positive(), code: z.string().trim().min(2).max(32).optional(), prefix: z.string().trim().min(1).max(32).optional(), nextSequence: z.number().int().positive().optional(), numberPadding: z.number().int().min(3).max(12).optional(), isActive: z.boolean().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        await updateInvoiceSeries(input);
+        await appendAuditLog({ userId: ctx.staff.userId, action: "fiscal.invoice_series.updated", entityType: "invoice_series", entityId: input.invoiceSeriesId, metadata: { changedFields: Object.keys(input).filter(key => key !== "invoiceSeriesId") } });
+        return { success: true };
+      }),
+    allocateDocument: adminStaffProcedure.input(z.object({ invoiceSeriesId: z.number().int().positive(), saleId: z.number().int().positive().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const allocation = await allocateFiscalDocument(input);
+        await appendAuditLog({ userId: ctx.staff.userId, locationId: allocation.locationId, action: "fiscal.document.allocated", entityType: "fiscal_document", entityId: allocation.fiscalDocumentId, metadata: { invoiceSeriesId: input.invoiceSeriesId, hasSale: Boolean(input.saleId) } });
+        return allocation;
+      }),
+    receiptDevices: adminStaffProcedure.input(z.object({ locationId: z.number().int().positive().optional() }).optional()).query(({ input }) => listReceiptDevices(input?.locationId)),
+    createReceiptDevice: adminStaffProcedure.input(z.object({ locationId: z.number().int().positive(), invoiceSeriesId: z.number().int().positive(), code: z.string().trim().min(2).max(40), serialNumber: z.string().trim().max(120).optional(), permitNumber: z.string().trim().max(120).optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const receiptDeviceId = await createReceiptDevice(input);
+        await appendAuditLog({ userId: ctx.staff.userId, locationId: input.locationId, action: "fiscal.receipt_device.created", entityType: "receipt_device", entityId: receiptDeviceId, metadata: { invoiceSeriesId: input.invoiceSeriesId, code: input.code } });
+        return { receiptDeviceId };
+      }),
+    updateReceiptDevice: adminStaffProcedure.input(z.object({ receiptDeviceId: z.number().int().positive(), invoiceSeriesId: z.number().int().positive().optional(), code: z.string().trim().min(2).max(40).optional(), serialNumber: z.string().trim().max(120).nullable().optional(), permitNumber: z.string().trim().max(120).nullable().optional(), isActive: z.boolean().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        await updateReceiptDevice(input);
+        await appendAuditLog({ userId: ctx.staff.userId, action: "fiscal.receipt_device.updated", entityType: "receipt_device", entityId: input.receiptDeviceId, metadata: { changedFields: Object.keys(input).filter(key => key !== "receiptDeviceId") } });
+        return { success: true };
+      }),
+    documents: adminStaffProcedure.input(z.object({ locationId: z.number().int().positive().optional() }).optional()).query(({ input }) => listFiscalDocuments(input?.locationId)),
+  }),
   audit: router({
     list: adminStaffProcedure.input(z.object({ locationId: z.number().int().positive().optional(), limit: z.number().int().min(1).max(100).optional() }).optional())
       .query(({ input }) => listAuditLogs(input)),
@@ -306,7 +384,7 @@ export const appRouter = router({
         return { cashSessionId };
       }),
     close: staffProcedure
-      .input(z.object({ cashSessionId: z.number().int().positive(), closingCash: z.string().regex(/^\d+(\.\d{1,2})?$/) }))
+      .input(z.object({ cashSessionId: z.number().int().positive(), closingCash: z.string().regex(/^\d+(\.\d{1,2})?$/), varianceReason: z.string().trim().min(3).max(500).optional() }))
       .mutation(async ({ ctx, input }) => {
         const session = await getCashSessionWithRegister(input.cashSessionId);
         if (!session) throw new TRPCError({ code: "NOT_FOUND", message: "Cash session was not found" });
@@ -314,8 +392,25 @@ export const appRouter = router({
         if (!mayClose || !(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, session.locationId))) {
           throw new TRPCError({ code: "FORBIDDEN", message: "You cannot close this cash session" });
         }
-        const result = await closeCashSession({ cashSessionId: input.cashSessionId, closedById: ctx.staff.userId, closingCash: input.closingCash });
-        await appendAuditLog({ userId: ctx.staff.userId, locationId: session.locationId, action: "cash_session.closed", entityType: "cash_session", entityId: input.cashSessionId, metadata: { variance: result.variance } });
+        const result = await closeCashSession({ cashSessionId: input.cashSessionId, closedById: ctx.staff.userId, closingCash: input.closingCash, varianceReason: input.varianceReason });
+        await appendAuditLog({ userId: ctx.staff.userId, locationId: session.locationId, action: "cash_session.closed", entityType: "cash_session", entityId: input.cashSessionId, metadata: { variance: result.variance, approvalStatus: result.varianceApprovalStatus } });
+        return result;
+      }),
+    count: staffProcedure.input(z.object({ cashSessionId: z.number().int().positive(), entries: z.array(z.object({ denomination: z.string().regex(/^\d+(\.\d{1,2})?$/), quantity: z.number().int().min(0) })).min(1).max(20) }))
+      .mutation(async ({ ctx, input }) => {
+        const session = await getCashSessionWithRegister(input.cashSessionId);
+        const mayCount = session && (session.openedById === ctx.staff.userId || ctx.staff.role === "manager" || ctx.staff.role === "admin") && await hasLocationAccess(ctx.staff.userId, ctx.staff.role, session.locationId);
+        if (!mayCount) throw new TRPCError({ code: "FORBIDDEN", message: "You cannot count this cash session" });
+        const result = await recordCashCount({ ...input, countedById: ctx.staff.userId });
+        await appendAuditLog({ userId: ctx.staff.userId, locationId: session.locationId, action: "cash_session.counted", entityType: "cash_session", entityId: input.cashSessionId, metadata: { denominationRows: input.entries.length, total: result.total } });
+        return result;
+      }),
+    approveVariance: managerProcedure.input(z.object({ cashSessionId: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        const session = await getCashSessionWithRegister(input.cashSessionId);
+        if (!session || !(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, session.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this cash session" });
+        const result = await approveCashVariance({ cashSessionId: input.cashSessionId, approvedById: ctx.staff.userId });
+        await appendAuditLog({ userId: ctx.staff.userId, locationId: session.locationId, action: "cash_session.variance_approved", entityType: "cash_session", entityId: input.cashSessionId, metadata: { variance: result.variance } });
         return result;
       }),
   }),
@@ -475,6 +570,24 @@ export const appRouter = router({
         if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, receipt.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this receipt location" });
         return receipt;
       }),
+  }),
+  returns: router({
+    process: managerProcedure.input(z.object({
+      saleId: z.number().int().positive(), cashSessionId: z.number().int().positive().optional(),
+      reasonCode: z.enum(["customer_change_mind", "damaged", "wrong_item", "pricing_error", "other"]), reasonNote: z.string().trim().min(3).max(500).optional(),
+      refundMethod: paymentMethodSchema, items: z.array(z.object({ saleItemId: z.number().int().positive(), quantity: z.string().regex(/^\d+(\.\d{1,3})?$/) })).min(1).max(100),
+    })).mutation(async ({ ctx, input }) => {
+      const sale = await getSaleAccessInfo(input.saleId);
+      if (!sale) throw new TRPCError({ code: "NOT_FOUND", message: "Sale was not found" });
+      if (!(await hasLocationAccess(ctx.staff.userId, ctx.staff.role, sale.locationId))) throw new TRPCError({ code: "FORBIDDEN", message: "You are not assigned to this sale location" });
+      try {
+        const result = await processPartialReturn({ ...input, processedById: ctx.staff.userId, approvedById: ctx.staff.userId });
+        await appendAuditLog({ userId: ctx.staff.userId, locationId: result.locationId, action: "sale.returned", entityType: "sale_return", entityId: result.returnId, metadata: { saleId: input.saleId, reasonCode: input.reasonCode, refundMethod: input.refundMethod, lineCount: input.items.length } });
+        return result;
+      } catch (error) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "Return could not be processed" });
+      }
+    }),
   }),
   loyalty: router({
     lookup: staffProcedure.input(z.object({ identifier: z.string().trim().min(3).max(320) }))

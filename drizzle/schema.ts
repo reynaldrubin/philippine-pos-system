@@ -14,7 +14,7 @@ import {
 
 export const staffRoles = ["cashier", "manager", "admin"] as const;
 const persistedUserRoles = ["user", ...staffRoles] as const;
-export const staffMenuKeys = ["overview", "register", "inventory", "transfers", "members", "operations", "reports", "users"] as const;
+export const staffMenuKeys = ["overview", "register", "inventory", "transfers", "members", "operations", "reports", "users", "compliance"] as const;
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -79,6 +79,39 @@ export const locations = mysqlTable(
   table => [index("locations_active_idx").on(table.isActive)],
 );
 
+export const businessProfiles = mysqlTable(
+  "businessProfiles",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    legalName: varchar("legalName", { length: 240 }).notNull(),
+    tradeName: varchar("tradeName", { length: 240 }),
+    tin: varchar("tin", { length: 32 }).notNull(),
+    vatStatus: mysqlEnum("vatStatus", ["vat", "non_vat"]).notNull(),
+    registeredAddress: text("registeredAddress").notNull(),
+    invoiceLabel: varchar("invoiceLabel", { length: 80 }).default("Invoice").notNull(),
+    isActive: boolean("isActive").default(true).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("business_profiles_active_idx").on(table.isActive)],
+);
+
+export const taxRegistrations = mysqlTable(
+  "taxRegistrations",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    businessProfileId: int("businessProfileId").notNull().references(() => businessProfiles.id, { onDelete: "restrict" }),
+    birRdoCode: varchar("birRdoCode", { length: 16 }),
+    certificateNumber: varchar("certificateNumber", { length: 80 }),
+    effectiveFrom: timestamp("effectiveFrom"),
+    effectiveTo: timestamp("effectiveTo"),
+    status: mysqlEnum("status", ["active", "inactive"]).default("active").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("tax_registrations_profile_status_idx").on(table.businessProfileId, table.status)],
+);
+
 export const userLocations = mysqlTable(
   "userLocations",
   {
@@ -108,6 +141,45 @@ export const registers = mysqlTable(
   table => [uniqueIndex("register_location_code_unique").on(table.locationId, table.code)],
 );
 
+export const invoiceSeries = mysqlTable(
+  "invoiceSeries",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    businessProfileId: int("businessProfileId").notNull().references(() => businessProfiles.id, { onDelete: "restrict" }),
+    locationId: int("locationId").notNull().references(() => locations.id, { onDelete: "restrict" }),
+    code: varchar("code", { length: 32 }).notNull(),
+    prefix: varchar("prefix", { length: 32 }).notNull(),
+    nextSequence: int("nextSequence").default(1).notNull(),
+    numberPadding: int("numberPadding").default(8).notNull(),
+    isActive: boolean("isActive").default(true).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    uniqueIndex("invoice_series_location_code_unique").on(table.locationId, table.code),
+    index("invoice_series_location_active_idx").on(table.locationId, table.isActive),
+  ],
+);
+
+export const receiptDevices = mysqlTable(
+  "receiptDevices",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    locationId: int("locationId").notNull().references(() => locations.id, { onDelete: "restrict" }),
+    invoiceSeriesId: int("invoiceSeriesId").notNull().references(() => invoiceSeries.id, { onDelete: "restrict" }),
+    code: varchar("code", { length: 40 }).notNull(),
+    serialNumber: varchar("serialNumber", { length: 120 }),
+    permitNumber: varchar("permitNumber", { length: 120 }),
+    isActive: boolean("isActive").default(true).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    uniqueIndex("receipt_devices_location_code_unique").on(table.locationId, table.code),
+    index("receipt_devices_series_active_idx").on(table.invoiceSeriesId, table.isActive),
+  ],
+);
+
 export const cashSessions = mysqlTable(
   "cashSessions",
   {
@@ -120,10 +192,45 @@ export const cashSessions = mysqlTable(
     expectedCash: decimal("expectedCash", { precision: 14, scale: 2 }).default("0").notNull(),
     closingCash: decimal("closingCash", { precision: 14, scale: 2 }),
     variance: decimal("variance", { precision: 14, scale: 2 }),
+    varianceReason: text("varianceReason"),
+    varianceApprovalStatus: mysqlEnum("varianceApprovalStatus", ["not_required", "pending", "approved"]).default("not_required").notNull(),
+    varianceApprovedById: int("varianceApprovedById").references(() => users.id, { onDelete: "restrict" }),
+    varianceApprovedAt: timestamp("varianceApprovedAt"),
     openedAt: timestamp("openedAt").defaultNow().notNull(),
     closedAt: timestamp("closedAt"),
   },
   table => [index("cash_sessions_register_status_idx").on(table.registerId, table.status)],
+);
+
+export const cashCountEntries = mysqlTable(
+  "cashCountEntries",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    cashSessionId: int("cashSessionId").notNull().references(() => cashSessions.id, { onDelete: "cascade" }),
+    denomination: decimal("denomination", { precision: 14, scale: 2 }).notNull(),
+    quantity: int("quantity").notNull(),
+    countedAmount: decimal("countedAmount", { precision: 14, scale: 2 }).notNull(),
+    countedById: int("countedById").notNull().references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [uniqueIndex("cash_count_session_denomination_unique").on(table.cashSessionId, table.denomination)],
+);
+
+export const cashSafeDrops = mysqlTable(
+  "cashSafeDrops",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    cashSessionId: int("cashSessionId").notNull().references(() => cashSessions.id, { onDelete: "restrict" }),
+    locationId: int("locationId").notNull().references(() => locations.id, { onDelete: "restrict" }),
+    amount: decimal("amount", { precision: 14, scale: 2 }).notNull(),
+    reason: text("reason").notNull(),
+    status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("pending").notNull(),
+    createdById: int("createdById").notNull().references(() => users.id, { onDelete: "restrict" }),
+    approvedById: int("approvedById").references(() => users.id, { onDelete: "restrict" }),
+    approvedAt: timestamp("approvedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [index("cash_safe_drops_session_status_idx").on(table.cashSessionId, table.status)],
 );
 
 export const categories = mysqlTable("categories", {
@@ -313,6 +420,55 @@ export const payments = mysqlTable(
   table => [index("payments_sale_idx").on(table.saleId)],
 );
 
+export const saleReturns = mysqlTable(
+  "saleReturns",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    returnNumber: varchar("returnNumber", { length: 48 }).notNull().unique(),
+    saleId: int("saleId").notNull().references(() => sales.id, { onDelete: "restrict" }),
+    locationId: int("locationId").notNull().references(() => locations.id, { onDelete: "restrict" }),
+    cashSessionId: int("cashSessionId").references(() => cashSessions.id, { onDelete: "set null" }),
+    status: mysqlEnum("status", ["completed"]).default("completed").notNull(),
+    reasonCode: mysqlEnum("reasonCode", ["customer_change_mind", "damaged", "wrong_item", "pricing_error", "other"]).notNull(),
+    reasonNote: text("reasonNote"),
+    refundAmount: decimal("refundAmount", { precision: 14, scale: 2 }).notNull(),
+    refundMethod: mysqlEnum("refundMethod", ["cash", "gcash", "maya", "qrph", "debit_card", "credit_card", "bank_transfer"]).notNull(),
+    processedById: int("processedById").notNull().references(() => users.id, { onDelete: "restrict" }),
+    approvedById: int("approvedById").notNull().references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [index("sale_returns_sale_created_idx").on(table.saleId, table.createdAt), index("sale_returns_location_created_idx").on(table.locationId, table.createdAt)],
+);
+
+export const saleReturnItems = mysqlTable(
+  "saleReturnItems",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    returnId: int("returnId").notNull().references(() => saleReturns.id, { onDelete: "restrict" }),
+    saleItemId: int("saleItemId").notNull().references(() => saleItems.id, { onDelete: "restrict" }),
+    productId: int("productId").notNull().references(() => products.id, { onDelete: "restrict" }),
+    quantity: decimal("quantity", { precision: 14, scale: 3 }).notNull(),
+    refundAmount: decimal("refundAmount", { precision: 14, scale: 2 }).notNull(),
+  },
+  table => [uniqueIndex("sale_return_item_unique").on(table.returnId, table.saleItemId)],
+);
+
+export const returnPayments = mysqlTable(
+  "returnPayments",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    returnId: int("returnId").notNull().references(() => saleReturns.id, { onDelete: "restrict" }),
+    originalPaymentId: int("originalPaymentId").references(() => payments.id, { onDelete: "set null" }),
+    method: mysqlEnum("method", ["cash", "gcash", "maya", "qrph", "debit_card", "credit_card", "bank_transfer"]).notNull(),
+    provider: varchar("provider", { length: 64 }).default("mock").notNull(),
+    status: mysqlEnum("status", ["refunded"]).default("refunded").notNull(),
+    amount: decimal("amount", { precision: 14, scale: 2 }).notNull(),
+    reference: varchar("reference", { length: 120 }),
+    processedAt: timestamp("processedAt").defaultNow().notNull(),
+  },
+  table => [index("return_payments_return_idx").on(table.returnId)],
+);
+
 export const receipts = mysqlTable("receipts", {
   id: int("id").autoincrement().primaryKey(),
   saleId: int("saleId").notNull().references(() => sales.id, { onDelete: "cascade" }).unique(),
@@ -322,6 +478,26 @@ export const receipts = mysqlTable("receipts", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const fiscalDocuments = mysqlTable(
+  "fiscalDocuments",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    invoiceSeriesId: int("invoiceSeriesId").notNull().references(() => invoiceSeries.id, { onDelete: "restrict" }),
+    locationId: int("locationId").notNull().references(() => locations.id, { onDelete: "restrict" }),
+    saleId: int("saleId").references(() => sales.id, { onDelete: "restrict" }),
+    documentNumber: varchar("documentNumber", { length: 96 }).notNull(),
+    sequenceNumber: int("sequenceNumber").notNull(),
+    status: mysqlEnum("status", ["allocated", "issued", "voided"]).default("allocated").notNull(),
+    metadata: json("metadata"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [
+    uniqueIndex("fiscal_documents_series_number_unique").on(table.invoiceSeriesId, table.documentNumber),
+    uniqueIndex("fiscal_documents_sale_unique").on(table.saleId),
+    index("fiscal_documents_location_created_idx").on(table.locationId, table.createdAt),
+  ],
+);
+
 export const stockMovements = mysqlTable(
   "stockMovements",
   {
@@ -329,7 +505,7 @@ export const stockMovements = mysqlTable(
     locationId: int("locationId").notNull().references(() => locations.id, { onDelete: "restrict" }),
     productId: int("productId").notNull().references(() => products.id, { onDelete: "restrict" }),
     quantityDelta: decimal("quantityDelta", { precision: 14, scale: 3 }).notNull(),
-    movementType: mysqlEnum("movementType", ["receiving", "sale", "void", "adjustment", "transfer_shipment", "transfer_receipt"]).notNull(),
+    movementType: mysqlEnum("movementType", ["receiving", "sale", "void", "return", "adjustment", "transfer_shipment", "transfer_receipt"]).notNull(),
     referenceType: varchar("referenceType", { length: 64 }),
     referenceId: int("referenceId"),
     note: text("note"),

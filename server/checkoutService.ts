@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import { and, eq, gte, sql } from "drizzle-orm";
 import {
   cashSessions,
+  fiscalDocuments,
+  invoiceSeries,
   locationInventory,
   locations,
   loyaltyAccounts,
@@ -29,6 +31,7 @@ import {
   taxRateToBasisPoints,
 } from "./checkoutRules";
 import { getDb } from "./db";
+import { formatFiscalDocumentNumber } from "./fiscalRules";
 
 export type CheckoutRequest = {
   locationId: number;
@@ -216,6 +219,26 @@ export async function completeCheckout(input: CheckoutRequest) {
     });
     const saleId = Number(saleResult.insertId);
 
+    const activeSeriesRows = await tx.select({ id: invoiceSeries.id, prefix: invoiceSeries.prefix, nextSequence: invoiceSeries.nextSequence, numberPadding: invoiceSeries.numberPadding })
+      .from(invoiceSeries).where(and(eq(invoiceSeries.locationId, input.locationId), eq(invoiceSeries.isActive, true))).orderBy(invoiceSeries.id).limit(1).for("update");
+    const activeSeries = activeSeriesRows[0];
+    const fiscalDocument = activeSeries ? {
+      sequenceNumber: activeSeries.nextSequence,
+      documentNumber: formatFiscalDocumentNumber(activeSeries.prefix, activeSeries.nextSequence, activeSeries.numberPadding),
+    } : null;
+    if (activeSeries && fiscalDocument) {
+      await tx.update(invoiceSeries).set({ nextSequence: fiscalDocument.sequenceNumber + 1 }).where(eq(invoiceSeries.id, activeSeries.id));
+      await tx.insert(fiscalDocuments).values({
+        invoiceSeriesId: activeSeries.id,
+        locationId: input.locationId,
+        saleId,
+        documentNumber: fiscalDocument.documentNumber,
+        sequenceNumber: fiscalDocument.sequenceNumber,
+        status: "issued",
+        metadata: { source: "checkout" },
+      });
+    }
+
     for (const line of quote.lines) {
       const [inventoryResult] = await tx.update(locationInventory).set({ quantity: sql`${locationInventory.quantity} - ${line.quantity}` })
         .where(and(eq(locationInventory.locationId, input.locationId), eq(locationInventory.productId, line.productId), gte(locationInventory.quantity, line.quantity)));
@@ -260,6 +283,7 @@ export async function completeCheckout(input: CheckoutRequest) {
       ...serializeQuote(quote), payment: {
         method: input.paymentMethod, amountTendered: centavosToDecimal(payment.amountTenderedCentavos), changeAmount: centavosToDecimal(payment.changeCentavos), reference,
       }, loyalty: { pointsEarned: input.memberId ? quote.pointsEarned : 0, pointsBalance },
+      fiscal: fiscalDocument ? { ...fiscalDocument, status: "issued" } : null,
     };
     await tx.insert(receipts).values({ saleId, receiptNumber, content: receiptContent });
     return { saleId, receiptNumber, replayed: false, receipt: receiptContent };

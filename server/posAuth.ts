@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import type { StaffRole } from "./authTokens";
 import { verifyMemberAccessToken, verifyStaffAccessToken } from "./authTokens";
-import { getLoyaltyMemberById, getStaffById } from "./db";
+import { appendAuditLog, getLoyaltyMemberById, getStaffById } from "./db";
 import { publicProcedure } from "./_core/trpc";
 
 function bearerToken(value: string | undefined): string | null {
@@ -17,7 +17,10 @@ export const staffProcedure = publicProcedure.use(async ({ ctx, next }) => {
   try {
     const tokenPayload = await verifyStaffAccessToken(token);
     const currentStaff = await getStaffById(tokenPayload.userId);
-    if (!currentStaff || !currentStaff.isActive || currentStaff.role === "user") throw new Error("Staff account is unavailable");
+    if (!currentStaff || !currentStaff.isActive || currentStaff.role === "user") {
+      void appendAuditLog({ userId: tokenPayload.userId, action: "authorization.denied", entityType: "staff", entityId: tokenPayload.userId, metadata: { policy: "staff_account_active" } });
+      throw new Error("Staff account is unavailable");
+    }
     const staff = { userId: currentStaff.id, role: currentStaff.role as StaffRole, kind: "staff" as const };
     return next({ ctx: { ...ctx, staff } });
   } catch {
@@ -28,6 +31,7 @@ export const staffProcedure = publicProcedure.use(async ({ ctx, next }) => {
 function roleProcedure(allowedRoles: readonly StaffRole[]) {
   return staffProcedure.use(async ({ ctx, next }) => {
     if (!allowedRoles.includes(ctx.staff.role)) {
+      void appendAuditLog({ userId: ctx.staff.userId, action: "authorization.denied", entityType: "staff", entityId: ctx.staff.userId, metadata: { policy: "staff_role", actualRole: ctx.staff.role, requiredRoles: allowedRoles } });
       throw new TRPCError({ code: "FORBIDDEN", message: "Your staff role cannot perform this action" });
     }
     return next({ ctx });
@@ -44,7 +48,10 @@ export const memberProcedure = publicProcedure.use(async ({ ctx, next }) => {
   try {
     const member = await verifyMemberAccessToken(token);
     const currentMember = await getLoyaltyMemberById(member.memberId);
-    if (!currentMember || currentMember.status !== "active") throw new Error("Member account is unavailable");
+    if (!currentMember || currentMember.status !== "active") {
+      void appendAuditLog({ action: "authorization.denied", entityType: "loyalty_member", entityId: member.memberId, metadata: { policy: "member_account_active" } });
+      throw new Error("Member account is unavailable");
+    }
     return next({ ctx: { ...ctx, member } });
   } catch {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Member access token is invalid or expired" });

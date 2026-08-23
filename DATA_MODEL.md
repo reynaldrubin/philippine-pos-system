@@ -11,7 +11,9 @@ The Drizzle definitions in `drizzle/schema.ts` are the authoritative schema sour
 | `locations` | Branch, store, warehouse, or kiosk | Owns registers, stock, sales, cash sessions, and location reports |
 | `userLocations` | Branch assignment and primary location | Links `users` to `locations` |
 | `registers` | POS till/register endpoint | Belongs to one location and owns cash sessions |
-| `cashSessions` | Opening float, expected cash, counted close, variance | Belongs to a register and location; opened/closed by staff |
+| `cashSessions` | Opening float, expected cash, counted close, variance, explanation, and approval state | Belongs to a register and location; material variances require a reason and manager/Admin approval |
+| `cashCountEntries` | Cash count by PHP denomination | One entry per denomination and cash session; supports reproducible counted totals |
+| `cashSafeDrops` | Controlled mid-session removal of cash | Pending/approved/rejected state, distinct reviewer, and location/session links preserve accountability |
 
 ## Catalog and inventory
 
@@ -20,7 +22,7 @@ The Drizzle definitions in `drizzle/schema.ts` are the authoritative schema sour
 | `categories` | Product grouping | Archived rather than deleted |
 | `products` | Global SKU, PHP price, cost price, and tax configuration | Archived rather than deleted; historical sale lines retain snapshots |
 | `locationInventory` | Quantity, threshold, reorder quantity, and local price override | One row per location/product |
-| `stockMovements` | Receiving, adjustment, sale, void, shipment, and receipt events | **Append-only** inventory audit ledger |
+| `stockMovements` | Receiving, adjustment, sale, void, return, shipment, and receipt events | **Append-only** inventory audit ledger |
 | `stockTransfers` and `stockTransferItems` | Inter-location request, shipment, receipt, and cancellation | Status transitions preserve the transfer history |
 
 ## Sales, payments, and receipts
@@ -31,8 +33,22 @@ The Drizzle definitions in `drizzle/schema.ts` are the authoritative schema sour
 | `saleItems` | Product line quantities, pricing snapshots, discounts, and tax | Tied to the sale for receipt integrity |
 | `payments` | Mock payment method, authorization result, PHP paid/change values | Supports Cash, GCash, Maya, QR Ph, debit, credit, and bank transfer |
 | `receipts` | Digital receipt number and immutable presentation data | Retrieved with cashier, member, payment, tax, and item information |
+| `saleReturns` | Immutable partial-return header linked to its original completed sale | Stores manager authorization, reason, refund method, and total refund amount |
+| `saleReturnItems` | Returned original sale lines and quantities | Caps cumulative returned quantity through service validation; restores inventory via a new movement |
+| `returnPayments` | Refund payment ledger | Keeps a separate refund reference rather than overwriting an original payment |
 
 Checkout is transactional: a successful sale writes sale, items, payment, receipt, stock reduction, stock movement, and loyalty earning together. Failed non-cash payment simulation creates none of these records. A void creates reversal-oriented records rather than altering prior sale or ledger history.
+
+## Security, audit, and fiscal readiness
+
+| Entity | Purpose | Control boundary |
+|---|---|---|
+| `authRateLimits` | Persistent staff/member login failure counters keyed by a hashed identifier and request source | Enforces expiring throttles across instances without storing the raw identifier or source value |
+| `auditLogs` | Best-effort, privacy-aware operational event trail | Stores action, entity, actor, location, and sanitized metadata; audit unavailability does not block the operational transaction |
+| `businessProfiles` and `taxRegistrations` | Legal-entity and registration-reference configuration | Admin-only fiscal readiness configuration |
+| `invoiceSeries`, `receiptDevices`, and `fiscalDocuments` | Per-location sequential invoice numbering and device records | An active series is optionally allocated within completed checkout; document allocation is transactionally locked |
+
+> Fiscal tables and sequential numbering are configurable groundwork only. They do **not** establish BIR certification, EIS integration, tax compliance, or payment-provider certification.
 
 ## Loyalty and member portal
 

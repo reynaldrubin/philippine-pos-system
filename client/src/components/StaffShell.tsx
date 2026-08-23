@@ -2,7 +2,7 @@ import { formatRole } from "@/lib/currency";
 import { StaffMenuKey, StaffRole, usePosStore } from "@/stores/posStore";
 import { trpc } from "@/lib/trpc";
 import {
-  ArrowLeftRight, BadgePercent, BarChart3, ChevronDown, LayoutDashboard, LogOut, Menu, Package, ReceiptText, Settings2, ShoppingCart, Store, UsersRound, UserCog,
+  ArrowLeftRight, BadgePercent, BarChart3, ChevronDown, ClipboardCheck, LayoutDashboard, LogOut, Menu, Package, ReceiptText, Settings2, ShoppingCart, Store, UsersRound, UserCog,
 } from "lucide-react";
 import React, { ReactNode, useEffect, useState } from "react";
 import { useLocation } from "wouter";
@@ -18,6 +18,7 @@ const navigation = [
   { path: "/operations", key: "operations", label: "Operations", icon: Settings2, roles: ["manager", "admin"] },
   { path: "/reports", key: "reports", label: "Reports", icon: BarChart3, roles: ["manager", "admin"] },
   { path: "/users", key: "users", label: "Staff & access", icon: UserCog, roles: ["admin"] },
+  { path: "/compliance", key: "compliance", label: "Fiscal & audit", icon: ClipboardCheck, roles: ["admin"] },
 ];
 
 export default function StaffShell({ children }: StaffShellProps) {

@@ -15,7 +15,7 @@ function createCheckoutDb(selectResults: unknown[][]) {
     select: () => {
       const result = selectResults[selectIndex++] ?? [];
       const chain: any = {
-        from: () => chain, innerJoin: () => chain, where: () => chain, limit: async () => result,
+        from: () => chain, innerJoin: () => chain, where: () => chain, orderBy: () => chain, for: () => chain, limit: () => chain,
         then: (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) => Promise.resolve(result).then(resolve, reject),
       };
       return chain;

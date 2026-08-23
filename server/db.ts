@@ -4,6 +4,9 @@ import {
   InsertUser,
   auditLogs,
   authRateLimits,
+  businessProfiles,
+  cashCountEntries,
+  cashSafeDrops,
   categories,
   cashSessions,
   locationInventory,
@@ -12,7 +15,10 @@ import {
   loyaltyMembers,
   loyaltyTransactions,
   locations,
+  fiscalDocuments,
+  invoiceSeries,
   products,
+  receiptDevices,
   registers,
   saleItems,
   sales,
@@ -21,12 +27,15 @@ import {
   stockTransferItems,
   stockTransfers,
   staffMenuAssignments,
+  taxRegistrations,
   userLocations,
   users,
 } from "../drizzle/schema";
 import type { StaffRole } from "./authTokens";
 import { DEFAULT_MENU_ACCESS, RETAIL_MENU_KEYS, type RetailMenuKey } from "../shared/retailAccess";
 import { generateMemberCardToken, generateMemberNumber } from "./posRules";
+import { formatFiscalDocumentNumber } from "./fiscalRules";
+import { calculateDenominationCount, needsVarianceApproval, type DenominationCount } from "./cashControlRules";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -103,6 +112,120 @@ export async function clearAuthRateLimit(channel: "staff" | "member", keyHash: s
   const db = await getDb();
   if (!db) return;
   await db.delete(authRateLimits).where(and(eq(authRateLimits.channel, channel), eq(authRateLimits.keyHash, keyHash)));
+}
+
+export type BusinessProfileInput = {
+  legalName: string;
+  tradeName?: string | null;
+  tin: string;
+  vatStatus: "vat" | "non_vat";
+  registeredAddress: string;
+  invoiceLabel?: string;
+  isActive?: boolean;
+};
+
+export async function listBusinessProfiles() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(businessProfiles).orderBy(desc(businessProfiles.isActive), desc(businessProfiles.updatedAt));
+}
+
+export async function createBusinessProfile(input: BusinessProfileInput) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const result = await db.insert(businessProfiles).values({ ...input, tradeName: input.tradeName ?? null, invoiceLabel: input.invoiceLabel ?? "Invoice", isActive: input.isActive ?? true });
+  return Number(result[0].insertId);
+}
+
+export async function updateBusinessProfile(input: Partial<BusinessProfileInput> & { businessProfileId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const { businessProfileId, ...values } = input;
+  await db.update(businessProfiles).set(values).where(eq(businessProfiles.id, businessProfileId));
+}
+
+export async function listTaxRegistrations(businessProfileId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(taxRegistrations).where(eq(taxRegistrations.businessProfileId, businessProfileId)).orderBy(desc(taxRegistrations.status), desc(taxRegistrations.updatedAt));
+}
+
+export async function createTaxRegistration(input: { businessProfileId: number; birRdoCode?: string; certificateNumber?: string; effectiveFrom?: Date; effectiveTo?: Date; status?: "active" | "inactive" }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const result = await db.insert(taxRegistrations).values({ ...input, birRdoCode: input.birRdoCode ?? null, certificateNumber: input.certificateNumber ?? null, status: input.status ?? "active" });
+  return Number(result[0].insertId);
+}
+
+export async function updateTaxRegistration(input: { taxRegistrationId: number; birRdoCode?: string | null; certificateNumber?: string | null; effectiveFrom?: Date | null; effectiveTo?: Date | null; status?: "active" | "inactive" }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const { taxRegistrationId, ...values } = input;
+  await db.update(taxRegistrations).set(values).where(eq(taxRegistrations.id, taxRegistrationId));
+}
+
+export async function listInvoiceSeries(locationId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  if (locationId) return db.select().from(invoiceSeries).where(eq(invoiceSeries.locationId, locationId)).orderBy(desc(invoiceSeries.isActive), invoiceSeries.code);
+  return db.select().from(invoiceSeries).orderBy(desc(invoiceSeries.isActive), invoiceSeries.locationId, invoiceSeries.code);
+}
+
+export async function createInvoiceSeries(input: { businessProfileId: number; locationId: number; code: string; prefix: string; nextSequence?: number; numberPadding?: number; isActive?: boolean }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const result = await db.insert(invoiceSeries).values({ ...input, nextSequence: input.nextSequence ?? 1, numberPadding: input.numberPadding ?? 8, isActive: input.isActive ?? true });
+  return Number(result[0].insertId);
+}
+
+export async function updateInvoiceSeries(input: { invoiceSeriesId: number; code?: string; prefix?: string; nextSequence?: number; numberPadding?: number; isActive?: boolean }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const { invoiceSeriesId, ...values } = input;
+  await db.update(invoiceSeries).set(values).where(eq(invoiceSeries.id, invoiceSeriesId));
+}
+
+export async function listReceiptDevices(locationId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  if (locationId) return db.select().from(receiptDevices).where(eq(receiptDevices.locationId, locationId)).orderBy(desc(receiptDevices.isActive), receiptDevices.code);
+  return db.select().from(receiptDevices).orderBy(desc(receiptDevices.isActive), receiptDevices.locationId, receiptDevices.code);
+}
+
+export async function createReceiptDevice(input: { locationId: number; invoiceSeriesId: number; code: string; serialNumber?: string; permitNumber?: string; isActive?: boolean }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const result = await db.insert(receiptDevices).values({ ...input, serialNumber: input.serialNumber ?? null, permitNumber: input.permitNumber ?? null, isActive: input.isActive ?? true });
+  return Number(result[0].insertId);
+}
+
+export async function updateReceiptDevice(input: { receiptDeviceId: number; invoiceSeriesId?: number; code?: string; serialNumber?: string | null; permitNumber?: string | null; isActive?: boolean }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const { receiptDeviceId, ...values } = input;
+  await db.update(receiptDevices).set(values).where(eq(receiptDevices.id, receiptDeviceId));
+}
+
+export async function listFiscalDocuments(locationId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  if (locationId) return db.select().from(fiscalDocuments).where(eq(fiscalDocuments.locationId, locationId)).orderBy(desc(fiscalDocuments.createdAt)).limit(100);
+  return db.select().from(fiscalDocuments).orderBy(desc(fiscalDocuments.createdAt)).limit(100);
+}
+
+export async function allocateFiscalDocument(input: { invoiceSeriesId: number; saleId?: number; metadata?: Record<string, unknown> }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  return db.transaction(async tx => {
+    const seriesRows = await tx.select().from(invoiceSeries).where(eq(invoiceSeries.id, input.invoiceSeriesId)).limit(1).for("update");
+    const series = seriesRows[0];
+    if (!series || !series.isActive) throw new Error("Active invoice series was not found");
+    const sequenceNumber = series.nextSequence;
+    const documentNumber = formatFiscalDocumentNumber(series.prefix, sequenceNumber, series.numberPadding);
+    await tx.update(invoiceSeries).set({ nextSequence: sequenceNumber + 1 }).where(eq(invoiceSeries.id, series.id));
+    const result = await tx.insert(fiscalDocuments).values({ invoiceSeriesId: series.id, locationId: series.locationId, saleId: input.saleId ?? null, documentNumber, sequenceNumber, metadata: input.metadata });
+    return { fiscalDocumentId: Number(result[0].insertId), locationId: series.locationId, documentNumber, sequenceNumber };
+  });
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {
@@ -430,7 +553,7 @@ export async function getCashSessionWithRegister(cashSessionId: number) {
   return result[0];
 }
 
-export async function closeCashSession(input: { cashSessionId: number; closedById: number; closingCash: string }) {
+export async function closeCashSession(input: { cashSessionId: number; closedById: number; closingCash: string; varianceReason?: string }) {
   const db = await getDb();
   if (!db) throw new Error("Database is unavailable");
   const session = await getCashSessionWithRegister(input.cashSessionId);
@@ -439,10 +562,61 @@ export async function closeCashSession(input: { cashSessionId: number; closedByI
   const expectedCash = Number(session.expectedCash);
   if (!Number.isFinite(countedCash) || countedCash < 0) throw new Error("Counted cash must be a valid non-negative PHP amount");
   const variance = (countedCash - expectedCash).toFixed(2);
+  const requiresApproval = needsVarianceApproval(variance);
+  if (requiresApproval && !input.varianceReason?.trim()) throw new Error("A variance explanation is required when the cash difference is PHP 100 or more");
   await db.update(cashSessions).set({
-    status: "closed", closedById: input.closedById, closingCash: input.closingCash, variance, closedAt: new Date(),
+    status: "closed", closedById: input.closedById, closingCash: input.closingCash, variance, varianceReason: input.varianceReason?.trim() || null,
+    varianceApprovalStatus: requiresApproval ? "pending" : "not_required", closedAt: new Date(),
   }).where(and(eq(cashSessions.id, input.cashSessionId), eq(cashSessions.status, "open")));
-  return { expectedCash: expectedCash.toFixed(2), closingCash: countedCash.toFixed(2), variance };
+  return { expectedCash: expectedCash.toFixed(2), closingCash: countedCash.toFixed(2), variance, varianceApprovalStatus: requiresApproval ? "pending" : "not_required" };
+}
+
+export async function recordCashCount(input: { cashSessionId: number; countedById: number; entries: DenominationCount[] }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const count = calculateDenominationCount(input.entries);
+  await db.transaction(async tx => {
+    const session = await tx.select({ id: cashSessions.id, status: cashSessions.status }).from(cashSessions).where(eq(cashSessions.id, input.cashSessionId)).limit(1).for("update");
+    if (!session[0] || session[0].status !== "open") throw new Error("Cash session is not available for a count");
+    await tx.insert(cashCountEntries).values(count.entries.map(entry => ({ cashSessionId: input.cashSessionId, denomination: entry.denomination, quantity: entry.quantity, countedAmount: entry.countedAmount, countedById: input.countedById })));
+  });
+  return count;
+}
+
+export async function createCashSafeDrop(input: { cashSessionId: number; locationId: number; amount: string; reason: string; createdById: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const session = await getCashSessionWithRegister(input.cashSessionId);
+  if (!session || session.status !== "open" || session.locationId !== input.locationId) throw new Error("An open cash session at the selected location is required");
+  if (!(Number(input.amount) > 0)) throw new Error("Safe-drop amount must be positive");
+  const result = await db.insert(cashSafeDrops).values({ ...input, amount: input.amount, reason: input.reason.trim(), status: "pending" });
+  return Number(result[0].insertId);
+}
+
+export async function reviewCashSafeDrop(input: { safeDropId: number; approvedById: number; approve: boolean }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  return db.transaction(async tx => {
+    const drops = await tx.select().from(cashSafeDrops).where(eq(cashSafeDrops.id, input.safeDropId)).limit(1).for("update");
+    const drop = drops[0];
+    if (!drop || drop.status !== "pending") throw new Error("Safe drop is not pending review");
+    if (drop.createdById === input.approvedById) throw new Error("A safe drop must be reviewed by a different staff member");
+    const status = input.approve ? "approved" : "rejected";
+    await tx.update(cashSafeDrops).set({ status, approvedById: input.approvedById, approvedAt: new Date() }).where(eq(cashSafeDrops.id, drop.id));
+    if (input.approve) await tx.update(cashSessions).set({ expectedCash: sql`${cashSessions.expectedCash} - ${drop.amount}` }).where(and(eq(cashSessions.id, drop.cashSessionId), eq(cashSessions.status, "open")));
+    return { locationId: drop.locationId, status };
+  });
+}
+
+export async function approveCashVariance(input: { cashSessionId: number; approvedById: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const rows = await db.select({ id: cashSessions.id, closedById: cashSessions.closedById, status: cashSessions.status, variance: cashSessions.variance, approval: cashSessions.varianceApprovalStatus }).from(cashSessions).where(eq(cashSessions.id, input.cashSessionId)).limit(1);
+  const session = rows[0];
+  if (!session || session.status !== "closed" || session.approval !== "pending") throw new Error("Cash session does not require variance approval");
+  if (session.closedById === input.approvedById) throw new Error("A cash variance must be approved by a different staff member");
+  await db.update(cashSessions).set({ varianceApprovalStatus: "approved", varianceApprovedById: input.approvedById, varianceApprovedAt: new Date() }).where(eq(cashSessions.id, session.id));
+  return { variance: session.variance };
 }
 
 export async function listCategories() {

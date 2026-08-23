@@ -1,4 +1,4 @@
-export const RETAIL_MENU_KEYS = ["overview", "register", "inventory", "transfers", "members", "operations", "reports", "users"] as const;
+export const RETAIL_MENU_KEYS = ["overview", "register", "inventory", "transfers", "members", "operations", "reports", "users", "compliance"] as const;
 export type RetailMenuKey = (typeof RETAIL_MENU_KEYS)[number];
 export type RetailStaffRole = "cashier" | "manager" | "admin";
 

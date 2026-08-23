@@ -1,0 +1,1 @@
+ALTER TABLE `staffMenuAssignments` MODIFY COLUMN `menuKey` enum('overview','register','inventory','transfers','members','operations','reports','users','compliance') NOT NULL;
