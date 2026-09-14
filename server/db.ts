@@ -6,6 +6,7 @@ import {
   authRateLimits,
   businessProfiles,
   cashCountEntries,
+  cashMovements,
   cashSafeDrops,
   categories,
   cashSessions,
@@ -26,6 +27,7 @@ import {
   stockMovements,
   stockTransferItems,
   stockTransfers,
+  staffAttendance,
   staffMenuAssignments,
   taxRegistrations,
   userLocations,
@@ -627,6 +629,38 @@ export async function reviewCashSafeDrop(input: { safeDropId: number; approvedBy
     if (input.approve) await tx.update(cashSessions).set({ expectedCash: sql`${cashSessions.expectedCash} - ${drop.amount}` }).where(and(eq(cashSessions.id, drop.cashSessionId), eq(cashSessions.status, "open")));
     return { locationId: drop.locationId, status };
   });
+}
+
+export async function createCashMovement(input: { locationId: number; cashSessionId?: number; type: "cash_in" | "cash_out"; category: string; amount: string; note: string; createdById: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  if (!(Number(input.amount) > 0)) throw new Error("Cash movement amount must be positive");
+  if (!input.note.trim()) throw new Error("A cash movement note is required");
+  if (input.cashSessionId) {
+    const session = await getCashSessionWithRegister(input.cashSessionId);
+    if (!session || session.locationId !== input.locationId || session.status !== "open") throw new Error("An open cash session at the selected location is required");
+  }
+  const result = await db.insert(cashMovements).values({ ...input, cashSessionId: input.cashSessionId ?? null, category: input.category.trim(), amount: input.amount, note: input.note.trim() });
+  return Number(result[0].insertId);
+}
+
+export async function listCashMovements(locationId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ id: cashMovements.id, locationId: cashMovements.locationId, cashSessionId: cashMovements.cashSessionId, type: cashMovements.type, category: cashMovements.category, amount: cashMovements.amount, note: cashMovements.note, createdById: cashMovements.createdById, createdAt: cashMovements.createdAt, createdByName: users.name }).from(cashMovements).leftJoin(users, eq(cashMovements.createdById, users.id)).where(eq(cashMovements.locationId, locationId)).orderBy(desc(cashMovements.createdAt)).limit(100);
+}
+
+export async function recordStaffAttendance(input: { userId: number; locationId: number; eventType: "time_in" | "time_out"; note?: string | null; recordedById: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const result = await db.insert(staffAttendance).values({ ...input, note: input.note?.trim() || null });
+  return Number(result[0].insertId);
+}
+
+export async function listStaffAttendance(locationId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ id: staffAttendance.id, userId: staffAttendance.userId, locationId: staffAttendance.locationId, eventType: staffAttendance.eventType, note: staffAttendance.note, recordedById: staffAttendance.recordedById, createdAt: staffAttendance.createdAt, staffName: users.name, staffRole: users.role }).from(staffAttendance).innerJoin(users, eq(staffAttendance.userId, users.id)).where(eq(staffAttendance.locationId, locationId)).orderBy(desc(staffAttendance.createdAt)).limit(100);
 }
 
 export function assertIndependentCashReviewer(originatorId: number | null, reviewerId: number, subject: "safe drop" | "cash variance") {

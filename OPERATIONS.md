@@ -1,4 +1,4 @@
-# Philippine Multi-Location POS & Loyalty — Operations Guide
+# PosQ · Philippine Retail POS & Loyalty — Operations Guide
 
 ## Purpose and architecture
 
@@ -48,7 +48,7 @@ The supported mock payment methods are Cash, GCash, Maya, QR Ph, debit card, cre
 
 ## Inventory and transfers
 
-The **Inventory** workspace supports category creation and archiving, product creation and catalog maintenance, location price overrides, low-stock thresholds, reorder quantities, quantity adjustments, low-stock visibility, and stock movement review. Product and category archive actions preserve historical sale data.
+The **Inventory** workspace supports category creation and archiving, product creation and catalog maintenance, location price overrides, low-stock thresholds, reorder quantities, quantity adjustments, low-stock visibility, and stock movement review. Product and category archive actions preserve historical sale data. Overview and Inventory present low-stock alerts as operational notifications; no background notification delivery is claimed until scheduled infrastructure is configured.
 
 The **Transfers** workspace supports multi-line transfer requests between assigned locations. A transfer proceeds through `requested`, `shipped`, and `received` states. Staff at the source location ship the request; staff at the destination receive it. Requested transfers may be cancelled. All state-changing procedures enforce assigned-location access on the server.
 
@@ -66,6 +66,8 @@ Admins manage locations from **Operations**, including real active/inactive stat
 
 Admins can open **Fiscal & audit** to manage business profiles, tax-registration references, location invoice series, receipt-device records, issued fiscal document history, and privacy-aware audit events. An active invoice series is optionally issued inside a completed checkout transaction. This is readiness data and controlled sequencing only: it is **not** a representation of BIR certification, EIS submission, or compliance approval.
 
+Managers and Admins can use the **Cash drawer movements** panel in Operations to append a PHP cash-in or cash-out record with a category, note, and optional open-session link. These entries do not rewrite sales or cash-session totals; they provide an auditable operational trail alongside the existing safe-drop and close controls. The **Staff attendance** panel records append-only time-in and time-out events for the selected branch. Cashiers may record only their own events; Managers and Admins can review the location history, while Admins can record an event for a selected staff account.
+
 Managers and Admins use **Partial returns** to retrieve an original completed sale, choose remaining eligible quantities, document a reason, select a mock refund method, and complete an immutable return. The transaction creates a distinct return header, return items, refund-payment record, and inventory-restoration movement without editing the original completed sale or payment. After completion, the workspace can hand off to a **linked replacement sale** in Register. That checkout is limited to the same location and one replacement sale per return. Register displays the already-recorded refund, replacement total, and resulting net difference; the refund and replacement payment remain separate immutable financial records.
 
 ## Validation status
@@ -75,7 +77,7 @@ The latest automated validation run completed successfully:
 | Check | Result |
 |---|---|
 | TypeScript check | Passing |
-| Vitest suite | 85 tests across 36 test files passing |
+| Vitest suite | 106 tests across 46 test files passing |
 | Production build | Passing with route and vendor code splitting; no chunk-size warning |
 
 ## Validation record and outstanding acceptance checks
@@ -91,7 +93,7 @@ The latest automated validation run completed successfully:
 The following acceptance checks intentionally remain **deferred at the user's request** because they require temporary, valid staff and member credentials in the live browser: Admin staff profile mutation feedback; cashier checkout through a live session; manager inventory, transfer, cash-session, and report interactions; and member portal login with a live account. Before publication, run these checks with non-production test credentials, confirm the expected records in the managed database, and retain the results with the release record.
 | Restarted development service | Started without current browser or module errors |
 
-Authenticated browser workflows remain intentionally deferred at the user’s request because no temporary staff or member test credentials were supplied. The deferred checks are: owner-bootstrap UI in an uninitialized state; Admin staff profile editing; staff checkout and receipt flow; manager inventory, transfer, and report flow; and member portal login, dashboard loading, logout, and token clearing.
+Authenticated browser workflows remain intentionally deferred at the user’s request because no temporary staff or member test credentials were supplied. The deferred checks are: owner-bootstrap UI in an uninitialized state; Admin staff profile editing; staff checkout and receipt flow; manager inventory, transfer, cash movement, attendance, and report flow; and member portal login, dashboard loading, logout, and token clearing. Unauthenticated PosQ login rendering, responsive visual review, TypeScript, the full Vitest suite, production build, and additive migration application are complete.
 
 ## Operational controls
 

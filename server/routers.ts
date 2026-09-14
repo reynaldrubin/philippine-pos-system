@@ -12,7 +12,9 @@ import {
   assignUserToLocation,
   cancelStockTransfer,
   closeCashSession,
+  createCashMovement,
   recordCashCount,
+  recordStaffAttendance,
   approveCashVariance,
   createCashSafeDrop,
   getCashSafeDrop,
@@ -56,7 +58,9 @@ import {
   listMemberPurchases,
   listOpenCashSessionsForLocation,
   listCashSafeDrops,
+  listCashMovements,
   listPendingCashVariances,
+  listStaffAttendance,
   listLowStockForLocation,
   listInvoiceSeries,
   listProducts,
@@ -214,7 +218,35 @@ export const appRouter = router({
       .query(async ({ ctx, input }) => {
         await requireLocationAccess(ctx, input.locationId);
         return getLoyaltyLocationReport(input.locationId);
+    }),
+  }),
+  operations: router({
+    cashMovements: router({
+      list: managerProcedure.input(z.object({ locationId: z.number().int().positive() })).query(async ({ ctx, input }) => {
+        await requireLocationAccess(ctx, input.locationId);
+        return listCashMovements(input.locationId);
       }),
+      create: managerProcedure.input(z.object({ locationId: z.number().int().positive(), cashSessionId: z.number().int().positive().optional(), type: z.enum(["cash_in", "cash_out"]), category: z.string().trim().min(2).max(100), amount: phpAmountSchema.refine(value => Number(value) > 0), note: z.string().trim().min(3).max(500) })).mutation(async ({ ctx, input }) => {
+        await requireLocationAccess(ctx, input.locationId);
+        const movementId = await createCashMovement({ ...input, createdById: ctx.staff.userId });
+        await appendAuditLog({ userId: ctx.staff.userId, locationId: input.locationId, action: `cash.${input.type}.created`, entityType: "cash_movement", entityId: movementId, metadata: { category: input.category, amountProvided: true } });
+        return { movementId };
+      }),
+    }),
+    attendance: router({
+      list: managerProcedure.input(z.object({ locationId: z.number().int().positive() })).query(async ({ ctx, input }) => {
+        await requireLocationAccess(ctx, input.locationId);
+        return listStaffAttendance(input.locationId);
+      }),
+      record: staffProcedure.input(z.object({ locationId: z.number().int().positive(), userId: z.number().int().positive().optional(), eventType: z.enum(["time_in", "time_out"]), note: z.string().trim().max(240).optional() })).mutation(async ({ ctx, input }) => {
+        await requireLocationAccess(ctx, input.locationId);
+        const userId = input.userId ?? ctx.staff.userId;
+        if (userId !== ctx.staff.userId && ctx.staff.role === "cashier") denyLocationAccess(ctx, input.locationId, "attendance_self_only", "Cashiers can only record their own attendance");
+        const attendanceId = await recordStaffAttendance({ ...input, userId, recordedById: ctx.staff.userId });
+        await appendAuditLog({ userId: ctx.staff.userId, locationId: input.locationId, action: `attendance.${input.eventType}`, entityType: "staff_attendance", entityId: attendanceId, metadata: { subjectUserId: userId } });
+        return { attendanceId };
+      }),
+    }),
   }),
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

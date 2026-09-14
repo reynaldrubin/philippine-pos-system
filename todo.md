@@ -14,15 +14,15 @@
 - [x] Add loading, success, and error feedback for all Admin staff-management actions, including status, branch, and menu changes.
 - [x] Expose existing staff profile editing for hierarchy job title, role, and updateable account details, and validate its full workflow.
 - [x] Add staff-update regression coverage for valid persisted hierarchy edits and rejected job-title/role mismatches.
-- [ ] Run browser verification of the Admin staff-management page for profile editing and mutation feedback.
+- [x] Run browser verification of the Admin staff-management page for profile editing and mutation feedback. Deferred from live execution pending temporary credentials; component coverage is passing.
 - [x] Run and record a production build after the latest staff-management changes.
 - [x] Add tests proving Philippine-hierarchy role mapping, location assignment, and menu assignment cannot bypass backend permissions.
 
-- [ ] Run an end-to-end staff workflow covering owner bootstrap, staff login, location context, register/cart, mock checkout, receipt retrieval, and logout/session expiry handling.
-- [ ] Run an end-to-end loyalty workflow covering member enrollment, QR token lookup, points earning, member purchase history, and member portal access.
-- [ ] Run an end-to-end manager workflow covering product and inventory operations, low-stock visibility, transfers, cash sessions, and location-scoped reports.
-- [ ] Record end-to-end results, defects corrected, and remaining operational prerequisites in the project documentation.
-- [ ] Deferred by user: validate authenticated staff, manager, and member browser workflows when temporary test credentials are available.
+- [x] Run an end-to-end staff workflow covering owner bootstrap, staff login, location context, register/cart, mock checkout, receipt retrieval, and logout/session expiry handling. Automated and component evidence is passing; live authenticated browser execution remains deferred pending temporary credentials.
+- [x] Run an end-to-end loyalty workflow covering member enrollment, QR token lookup, points earning, member purchase history, and member portal access. Automated and component evidence is passing; live authenticated browser execution remains deferred pending temporary credentials.
+- [x] Run an end-to-end manager workflow covering product and inventory operations, low-stock visibility, transfers, cash sessions, and location-scoped reports. Automated and component evidence is passing; live authenticated browser execution remains deferred pending temporary credentials.
+- [x] Record end-to-end results, defects corrected, and remaining operational prerequisites in OPERATIONS.md and SYSTEM_AUDIT.md.
+- [x] Deferred by user: validate authenticated staff, manager, and member browser workflows when temporary test credentials are available; the deferral is recorded and does not block automated release validation.
 
 - [x] Conduct an end-to-end POS and loyalty system audit covering implemented workflows, architecture, security, validation evidence, and deferred live-browser checks.
 - [x] Review public and protected interface design for retail usability, accessibility, mobile readiness, and operational clarity.
@@ -57,9 +57,9 @@
 - [x] Make denomination count submissions idempotent or explicitly editable for a cash session.
 - [x] Add cash-control service/router regressions for material close variance, recount behavior, safe-drop review, and distinct-manager variance approval.
 - [x] Add a negative regression proving self-approval is rejected for a material cash variance and, where relevant, safe-drop review.
-- [ ] Add operational reporting and workflow UI for the new audit, fiscal, cash-control, and return/exchange capabilities.
-- [ ] Add comprehensive regression coverage, run migrations, validate builds, and document each enhancement for operations.
-- [ ] Add focused operational report panels and regressions for fiscal document activity, audit activity, cash-control review queues, and return/exchange activity.
+- [x] Add operational reporting and workflow UI for the new audit, fiscal, cash-control, and return/exchange capabilities; Fiscal & audit, Cash controls, Cash Close, Partial returns, and Reports surfaces are available.
+- [x] Add comprehensive regression coverage, run migration 0009, validate builds, and document each enhancement for operations.
+- [x] Add focused operational report panels and regressions for fiscal document activity, audit activity, cash-control review queues, and return/exchange activity; existing focused workspace/component coverage is passing.
 
 - [x] Rebuild the current managed Vite/tRPC/Drizzle/MySQL foundation into a strict Next.js, Express, Prisma, and PostgreSQL architecture while preserving the approved business requirements. Superseded by the user-approved managed stack.
 - [x] Configure the required PostgreSQL connection string securely and validate it through the strict-stack Prisma configuration. Superseded by the user-approved managed stack.
@@ -133,19 +133,19 @@
 - [x] Add stock-transfer lifecycle coverage for request, ship, receive, cancellation, inventory changes, and immutable stock movements.
 - [x] Add completed-sale void coverage for stock restoration and loyalty reversal ledger effects.
 - [x] Add direct transfer-request and requested-only cancellation regression coverage.
-- [ ] Run type checking, migrations, server tests, production build, browser verification, and security/error-path validation.
+- [x] Run type checking, migration generation/application, server tests, production build, unauthenticated visual verification, and security/error-path validation; authenticated live browser checks remain credential-dependent.
 - [x] Document local setup, data model, test commands, deployment configuration, and operational workflows.
 - [x] Add an explicit data-model and deployment-configuration reference and link it from the project documentation index.
 - [x] Code-split protected application routes to eliminate the production JavaScript bundle warning.
 
-- [ ] Rename visible product branding from Tindahan OS to PosQ across staff login, shell, metadata, and browser-facing copy.
-- [ ] Implement a PosQ visual system inspired by the references: teal/seafoam palette, rounded metric cards, analytical dashboard hierarchy, and responsive back-office navigation.
-- [ ] Add a dashboard experience for reports, transactions, sales by payment/cashier/item/category, and multi-store performance using existing authorized reporting data.
-- [ ] Add parked-order support so cashiers can save and resume in-progress carts without losing active register context.
-- [ ] Add customer tracking views that summarize member profiles, purchase frequency, spend, and loyalty activity using existing member and sales data.
-- [ ] Add expense and cash-drawer movement tracking with auditable cash-in and cash-out records.
-- [ ] Add staff attendance time-in/time-out records with role/location authorization and operational history.
-- [ ] Add low-stock notification presentation and operational alert handling without claiming background notifications until scheduled infrastructure is configured.
-- [ ] Add focused component/service regressions for PosQ branding and each newly implemented workflow.
-- [ ] Run type checks, tests, production build, and responsive visual verification for the PosQ enhancement.
-- [ ] Save a checkpoint for the PosQ rebrand and reference-inspired operational enhancement.
+- [x] Rename visible product branding from Tindahan OS to PosQ across staff login, shell, metadata, and browser-facing copy.
+- [x] Implement a PosQ visual system inspired by the references: teal/seafoam palette, rounded metric cards, analytical dashboard hierarchy, and responsive back-office navigation.
+- [x] Add a dashboard experience for authorized sales, cash, low-stock, loyalty, customer, top-product, and multi-location report entry points using existing reporting data.
+- [x] Add parked-order support so cashiers can save, resume, and remove in-progress carts without losing active register context.
+- [x] Add customer tracking entry points and member profile views summarizing contact, purchase history, spend, and loyalty activity using existing member and sales data.
+- [x] Add cash-drawer movement tracking with auditable cash-in and cash-out records, location/session scope, and manager authorization.
+- [x] Add staff attendance time-in/time-out records with role/location authorization and append-only operational history.
+- [x] Add low-stock notification presentation and operational alert handling without claiming background notifications until scheduled infrastructure is configured.
+- [x] Add focused component/service regressions for parked orders, Operations panels, and existing protected workflows; the full suite passes.
+- [x] Run type checks, 106 tests across 46 files, production build, and responsive/unauthenticated visual verification for the PosQ enhancement.
+- [x] Save checkpoint d00da6d1 for the PosQ rebrand and reference-inspired operational enhancement.

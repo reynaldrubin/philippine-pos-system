@@ -233,6 +233,36 @@ export const cashSafeDrops = mysqlTable(
   table => [index("cash_safe_drops_session_status_idx").on(table.cashSessionId, table.status)],
 );
 
+export const cashMovements = mysqlTable(
+  "cashMovements",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    locationId: int("locationId").notNull().references(() => locations.id, { onDelete: "restrict" }),
+    cashSessionId: int("cashSessionId").references(() => cashSessions.id, { onDelete: "set null" }),
+    type: mysqlEnum("type", ["cash_in", "cash_out"]).notNull(),
+    category: varchar("category", { length: 100 }).notNull(),
+    amount: decimal("amount", { precision: 14, scale: 2 }).notNull(),
+    note: text("note").notNull(),
+    createdById: int("createdById").notNull().references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [index("cash_movements_location_created_idx").on(table.locationId, table.createdAt)],
+);
+
+export const staffAttendance = mysqlTable(
+  "staffAttendance",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull().references(() => users.id, { onDelete: "restrict" }),
+    locationId: int("locationId").notNull().references(() => locations.id, { onDelete: "restrict" }),
+    eventType: mysqlEnum("eventType", ["time_in", "time_out"]).notNull(),
+    note: text("note"),
+    recordedById: int("recordedById").notNull().references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [index("staff_attendance_location_created_idx").on(table.locationId, table.createdAt), index("staff_attendance_user_created_idx").on(table.userId, table.createdAt)],
+);
+
 export const categories = mysqlTable("categories", {
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 120 }).notNull().unique(),

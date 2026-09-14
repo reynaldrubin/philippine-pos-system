@@ -24,6 +24,8 @@ vi.mock("@/lib/trpc", () => {
     stockTransfers: { list: { useQuery: query([]) }, request: { useMutation: mutation }, ship: { useMutation: mutation }, receive: { useMutation: mutation }, cancel: { useMutation: mutation } },
     locations: { registers: { useQuery: query([]) }, list: { useQuery: query([]) }, createRegister: { useMutation: mutation }, create: { useMutation: mutation }, update: { useMutation: mutation } },
     cashSessions: { list: { useQuery: query([]) }, open: { useMutation: mutation }, close: { useMutation: mutation } },
+    operations: { cashMovements: { list: { useQuery: query([]) }, create: { useMutation: mutation } }, attendance: { list: { useQuery: query([]) }, record: { useMutation: mutation } } },
+    staff: { list: { useQuery: query([]) } },
   } };
 });
 
@@ -63,5 +65,7 @@ describe("protected management workspaces", () => {
     render(<Operations />);
     expect(screen.getByRole("heading", { name: "Operations" })).toBeInTheDocument();
     expect(screen.getByText("Cash sessions")).toBeInTheDocument();
+    expect(screen.getByText("Cash drawer movements")).toBeInTheDocument();
+    expect(screen.getByText("Staff attendance")).toBeInTheDocument();
   });
 });

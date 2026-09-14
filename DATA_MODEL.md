@@ -14,6 +14,8 @@ The Drizzle definitions in `drizzle/schema.ts` are the authoritative schema sour
 | `cashSessions` | Opening float, expected cash, counted close, variance, explanation, and approval state | Belongs to a register and location; material variances require a reason and manager/Admin approval |
 | `cashCountEntries` | Cash count by PHP denomination | One entry per denomination and cash session; supports reproducible counted totals |
 | `cashSafeDrops` | Controlled mid-session removal of cash | Pending/approved/rejected state, distinct reviewer, and location/session links preserve accountability |
+| `cashMovements` | Auditable operational cash-in and cash-out entries | Append-only PHP movements with category, note, actor, and optional open-session link |
+| `staffAttendance` | Branch-scoped staff time-in and time-out events | Append-only events with subject staff, recorder, location, and timestamp |
 
 ## Catalog and inventory
 
