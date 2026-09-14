@@ -137,3 +137,15 @@
 - [x] Document local setup, data model, test commands, deployment configuration, and operational workflows.
 - [x] Add an explicit data-model and deployment-configuration reference and link it from the project documentation index.
 - [x] Code-split protected application routes to eliminate the production JavaScript bundle warning.
+
+- [ ] Rename visible product branding from Tindahan OS to PosQ across staff login, shell, metadata, and browser-facing copy.
+- [ ] Implement a PosQ visual system inspired by the references: teal/seafoam palette, rounded metric cards, analytical dashboard hierarchy, and responsive back-office navigation.
+- [ ] Add a dashboard experience for reports, transactions, sales by payment/cashier/item/category, and multi-store performance using existing authorized reporting data.
+- [ ] Add parked-order support so cashiers can save and resume in-progress carts without losing active register context.
+- [ ] Add customer tracking views that summarize member profiles, purchase frequency, spend, and loyalty activity using existing member and sales data.
+- [ ] Add expense and cash-drawer movement tracking with auditable cash-in and cash-out records.
+- [ ] Add staff attendance time-in/time-out records with role/location authorization and operational history.
+- [ ] Add low-stock notification presentation and operational alert handling without claiming background notifications until scheduled infrastructure is configured.
+- [ ] Add focused component/service regressions for PosQ branding and each newly implemented workflow.
+- [ ] Run type checks, tests, production build, and responsive visual verification for the PosQ enhancement.
+- [ ] Save a checkpoint for the PosQ rebrand and reference-inspired operational enhancement.

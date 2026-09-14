@@ -1,4 +1,4 @@
-# Philippine Multi-Location POS & Loyalty
+# PosQ · Philippine Retail POS & Loyalty
 
 This project uses a managed **React/Vite, Express/tRPC, Drizzle, and MySQL/TiDB** stack for Philippine retail POS, inventory, receipts, payments, and loyalty operations.
 
