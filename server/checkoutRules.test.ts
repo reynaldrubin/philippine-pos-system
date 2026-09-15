@@ -8,6 +8,7 @@ import {
   decimalToCentavos,
   millisToQuantity,
   quantityToMillis,
+  requiresPaymentReference,
   taxRateToBasisPoints,
 } from "./checkoutRules";
 
@@ -36,6 +37,13 @@ describe("PHP checkout rules", () => {
       .toEqual({ status: "failed", amountTenderedCentavos: 0, changeCentavos: 0 });
     expect(calculateCheckoutLoyalty(9999)).toBe(0);
     expect(calculateCheckoutLoyalty(27800)).toBe(2);
+  });
+
+  it("requires a transaction reference for non-cash Philippine payment methods", () => {
+    expect(requiresPaymentReference("cash")).toBe(false);
+    expect(requiresPaymentReference("gcash")).toBe(true);
+    expect(requiresPaymentReference("maya")).toBe(true);
+    expect(requiresPaymentReference("bank_transfer")).toBe(true);
   });
 
   it("allocates a discount proportionally while preserving the exact PHP total", () => {

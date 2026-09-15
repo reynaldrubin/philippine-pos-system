@@ -29,6 +29,7 @@ import {
   millisToQuantity,
   PaymentMethod,
   quantityToMillis,
+  requiresPaymentReference,
   taxRateToBasisPoints,
 } from "./checkoutRules";
 import { getDb } from "./db";
@@ -43,7 +44,9 @@ export type CheckoutRequest = {
   paymentMethod: PaymentMethod;
   amountTendered?: string;
   paymentReference?: string;
+  paymentSplits?: Array<{ paymentMethod: PaymentMethod; amount: string; paymentReference?: string }>;
   discountAmount?: string;
+  taxExempt?: boolean;
   mockPaymentOutcome?: "success" | "failed";
   exchangeReturnId?: number;
   idempotencyKey: string;
@@ -87,7 +90,7 @@ export function composeReceiptIdentity(input: {
   };
 }
 
-async function buildQuote(db: any, input: Pick<CheckoutRequest, "locationId" | "lines">): Promise<CheckoutQuote> {
+async function buildQuote(db: any, input: Pick<CheckoutRequest, "locationId" | "lines" | "taxExempt">): Promise<CheckoutQuote> {
   const lines: QuotedLine[] = [];
   for (const requested of input.lines) {
     const quantityMillis = quantityToMillis(requested.quantity);
@@ -112,6 +115,7 @@ async function buildQuote(db: any, input: Pick<CheckoutRequest, "locationId" | "
     const amounts = calculateLineAmounts({
       unitPriceCentavos, quantityMillis, taxBasisPoints: taxRateToBasisPoints(taxRate), isTaxInclusive: product.isTaxInclusive,
     });
+    if (input.taxExempt) amounts.taxCentavos = 0;
     lines.push({
       productId: product.productId, sku: product.sku, name: product.name, unitPriceCentavos, quantityMillis,
       quantity: millisToQuantity(quantityMillis), taxRate, taxBasisPoints: taxRateToBasisPoints(taxRate), discountCentavos: 0, ...amounts,
@@ -161,7 +165,7 @@ function serializeQuote(quote: CheckoutQuote) {
   };
 }
 
-export async function quoteCheckout(input: Pick<CheckoutRequest, "locationId" | "memberId" | "lines" | "discountAmount">) {
+export async function quoteCheckout(input: Pick<CheckoutRequest, "locationId" | "memberId" | "lines" | "discountAmount" | "taxExempt">) {
   const db = await getDb();
   if (!db) throw new Error("Database is unavailable");
   const quote = applyDiscount(await buildQuote(db, input), input.discountAmount);
@@ -214,11 +218,17 @@ export async function completeCheckout(input: CheckoutRequest) {
       memberAccount = account[0];
     }
 
-    const payment = calculateMockPayment({
-      method: input.paymentMethod, totalCentavos: quote.totalCentavos,
-      tenderedCentavos: input.amountTendered ? decimalToCentavos(input.amountTendered) : undefined, outcome: input.mockPaymentOutcome,
+    const paymentSplits = input.paymentSplits?.length ? input.paymentSplits : [{ paymentMethod: input.paymentMethod, amount: centavosToDecimal(quote.totalCentavos), paymentReference: input.paymentReference }];
+    const splitTotal = paymentSplits.reduce((sum, split) => sum + decimalToCentavos(split.amount), 0);
+    if (splitTotal !== quote.totalCentavos) throw new Error("Split payment amounts must equal the checkout total");
+    const validatedPayments = paymentSplits.map(split => {
+      const amountCentavos = decimalToCentavos(split.amount);
+      const tenderedCentavos = split.paymentMethod === "cash" ? (!input.paymentSplits?.length && input.amountTendered ? decimalToCentavos(input.amountTendered) : amountCentavos) : undefined;
+      const payment = calculateMockPayment({ method: split.paymentMethod, totalCentavos: amountCentavos, tenderedCentavos, outcome: input.mockPaymentOutcome });
+      if (payment.status === "failed") throw new Error(`Mock ${split.paymentMethod} payment failed; no sale was recorded`);
+      if (requiresPaymentReference(split.paymentMethod) && !split.paymentReference?.trim()) throw new Error("A transaction or reference number is required for digital payments");
+      return { split, amountCentavos, payment };
     });
-    if (payment.status === "failed") throw new Error(`Mock ${input.paymentMethod} payment failed; no sale was recorded`);
     const receiptNumber = `RCPT-${Date.now()}-${randomUUID().slice(0, 8).toUpperCase()}`;
     const [saleResult] = await tx.insert(sales).values({
       receiptNumber, locationId: input.locationId, registerId: input.registerId, cashSessionId: input.cashSessionId,
@@ -263,15 +273,15 @@ export async function completeCheckout(input: CheckoutRequest) {
       });
     }
 
-    const reference = input.paymentReference?.trim() || `MOCK-${input.paymentMethod.toUpperCase()}-${randomUUID().slice(0, 8).toUpperCase()}`;
-    await tx.insert(payments).values({
-      saleId, locationId: input.locationId, method: input.paymentMethod, provider: "mock", status: "paid",
-      amount: centavosToDecimal(quote.totalCentavos), amountTendered: centavosToDecimal(payment.amountTenderedCentavos),
-      changeAmount: centavosToDecimal(payment.changeCentavos), reference,
-      metadata: { processor: "mock", method: input.paymentMethod },
-    });
-    if (input.paymentMethod === "cash") {
-      await tx.update(cashSessions).set({ expectedCash: sql`${cashSessions.expectedCash} + ${centavosToDecimal(quote.totalCentavos)}` })
+    await tx.insert(payments).values(validatedPayments.map(({ split, amountCentavos, payment }) => ({
+      saleId, locationId: input.locationId, method: split.paymentMethod, provider: "mock", status: "paid" as const,
+      amount: centavosToDecimal(amountCentavos), amountTendered: centavosToDecimal(payment.amountTenderedCentavos),
+      changeAmount: centavosToDecimal(payment.changeCentavos), reference: split.paymentReference?.trim() || `MOCK-${split.paymentMethod.toUpperCase()}-${randomUUID().slice(0, 8).toUpperCase()}`,
+      metadata: { processor: "mock", method: split.paymentMethod },
+    })));
+    const cashAmount = validatedPayments.filter(({ split }) => split.paymentMethod === "cash").reduce((sum, item) => sum + item.amountCentavos, 0);
+    if (cashAmount > 0) {
+      await tx.update(cashSessions).set({ expectedCash: sql`${cashSessions.expectedCash} + ${centavosToDecimal(cashAmount)}` })
         .where(eq(cashSessions.id, input.cashSessionId));
     }
 
@@ -291,7 +301,10 @@ export async function completeCheckout(input: CheckoutRequest) {
       receiptNumber, issuedAt: new Date().toISOString(), currency: "PHP", ...composeReceiptIdentity({ location: location[0], register: register[0], cashier: cashier[0] }), saleId, memberId: input.memberId ?? null,
       member: receiptMember ? { id: receiptMember.id, memberNumber: receiptMember.memberNumber, name: `${receiptMember.firstName} ${receiptMember.lastName}` } : null,
       ...serializeQuote(quote), payment: {
-        method: input.paymentMethod, amountTendered: centavosToDecimal(payment.amountTenderedCentavos), changeAmount: centavosToDecimal(payment.changeCentavos), reference,
+        method: input.paymentSplits?.length ? "split" : input.paymentMethod,
+        amountTendered: centavosToDecimal(validatedPayments.reduce((sum, item) => sum + item.payment.amountTenderedCentavos, 0)),
+        changeAmount: centavosToDecimal(validatedPayments.reduce((sum, item) => sum + item.payment.changeCentavos, 0)),
+        reference: validatedPayments.map(item => item.split.paymentReference).filter(Boolean).join(", ") || null,
       }, loyalty: { pointsEarned: input.memberId ? quote.pointsEarned : 0, pointsBalance },
       fiscal: fiscalDocument ? { ...fiscalDocument, status: "issued" } : null,
       exchange: input.exchangeReturnId ? { returnId: input.exchangeReturnId } : null,

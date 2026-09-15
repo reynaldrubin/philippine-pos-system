@@ -41,6 +41,7 @@ import {
   listAuditLogs,
   lookupLoyaltyMemberForStaff,
   getRegisterAtLocation,
+  getPosDisplayMode,
   getProduct,
   getStaffByEmail,
   getStaffById,
@@ -78,6 +79,7 @@ import {
   setStaffMenuAccess,
   setLocationInventorySettings,
   setStaffPasswordAndAdminRole,
+  setPosDisplayMode,
   shipStockTransfer,
   updateCategory,
   updateBusinessProfile,
@@ -603,15 +605,15 @@ export const appRouter = router({
       }),
   }),
   checkout: router({
-    quote: staffProcedure.input(z.object({ locationId: z.number().int().positive(), memberId: z.number().int().positive().optional(), discountAmount: phpAmountSchema.optional(), lines: checkoutLinesSchema }))
+    quote: staffProcedure.input(z.object({ locationId: z.number().int().positive(), memberId: z.number().int().positive().optional(), discountAmount: phpAmountSchema.optional(), taxExempt: z.boolean().optional(), lines: checkoutLinesSchema }))
       .mutation(async ({ ctx, input }) => {
         await requireLocationAccess(ctx, input.locationId);
         return quoteCheckout(input);
       }),
     complete: staffProcedure.input(z.object({
       locationId: z.number().int().positive(), registerId: z.number().int().positive(), cashSessionId: z.number().int().positive(),
-      memberId: z.number().int().positive().optional(), paymentMethod: paymentMethodSchema, amountTendered: phpAmountSchema.optional(), discountAmount: phpAmountSchema.optional(), mockPaymentOutcome: z.enum(["success", "failed"]).optional(),
-      paymentReference: z.string().trim().min(2).max(120).optional(), exchangeReturnId: z.number().int().positive().optional(), idempotencyKey: z.string().trim().min(12).max(128), lines: checkoutLinesSchema,
+      memberId: z.number().int().positive().optional(), paymentMethod: paymentMethodSchema, amountTendered: phpAmountSchema.optional(), discountAmount: phpAmountSchema.optional(), taxExempt: z.boolean().optional(), mockPaymentOutcome: z.enum(["success", "failed"]).optional(),
+      paymentReference: z.string().trim().min(2).max(120).optional(), paymentSplits: z.array(z.object({ paymentMethod: paymentMethodSchema, amount: phpAmountSchema, paymentReference: z.string().trim().min(2).max(120).optional() })).min(2).max(4).optional(), exchangeReturnId: z.number().int().positive().optional(), idempotencyKey: z.string().trim().min(12).max(128), lines: checkoutLinesSchema,
     })).mutation(async ({ ctx, input }) => {
       await requireLocationAccess(ctx, input.locationId);
       try {
@@ -667,6 +669,16 @@ export const appRouter = router({
       } catch (error) {
         throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "Return could not be processed" });
       }
+    }),
+  }),
+  settings: router({
+    posDisplay: router({
+      get: staffProcedure.query(() => getPosDisplayMode()),
+      update: adminProcedure.input(z.object({ mode: z.enum(["cafe", "hardware", "grocery", "retail"] as const) })).mutation(async ({ ctx, input }) => {
+        const mode = await setPosDisplayMode(input.mode, ctx.user.id);
+        await appendAuditLog({ userId: ctx.user.id, action: "pos.display_mode.updated", entityType: "system_setting", entityId: "pos.displayMode", metadata: { mode } });
+        return { mode };
+      }),
     }),
   }),
   loyalty: router({

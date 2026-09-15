@@ -469,6 +469,27 @@ export async function setStaffPasswordAndAdminRole(userId: number, passwordHash:
   ]).onDuplicateKeyUpdate({ set: { updatedById: userId } });
 }
 
+export const POS_DISPLAY_MODES = ["cafe", "hardware", "grocery", "retail"] as const;
+export type PosDisplayMode = (typeof POS_DISPLAY_MODES)[number];
+
+export async function getPosDisplayMode(): Promise<PosDisplayMode> {
+  const db = await getDb();
+  if (!db) return "retail";
+  const row = await db.select({ value: systemSettings.value }).from(systemSettings).where(eq(systemSettings.key, "pos.displayMode")).limit(1);
+  const value = row[0]?.value;
+  return value && typeof value === "object" && "mode" in value && POS_DISPLAY_MODES.includes((value as { mode?: string }).mode as PosDisplayMode)
+    ? (value as { mode: PosDisplayMode }).mode
+    : "retail";
+}
+
+export async function setPosDisplayMode(mode: PosDisplayMode, updatedById: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  await db.insert(systemSettings).values({ key: "pos.displayMode", value: { mode }, updatedById })
+    .onDuplicateKeyUpdate({ set: { value: { mode }, updatedById } });
+  return mode;
+}
+
 export async function assignUserToLocation(userId: number, locationId: number, isPrimary = false) {
   const db = await getDb();
   if (!db) throw new Error("Database is unavailable");
@@ -771,8 +792,8 @@ export async function listInventoryForLocation(locationId: number, search?: stri
     inventoryId: locationInventory.id, productId: products.id, sku: products.sku, name: products.name, quantity: locationInventory.quantity,
     reservedQuantity: locationInventory.reservedQuantity, lowStockThreshold: locationInventory.lowStockThreshold,
     reorderQuantity: locationInventory.reorderQuantity, priceOverride: locationInventory.priceOverride, price: products.price,
-    taxRate: products.taxRate, isTaxInclusive: products.isTaxInclusive,
-  }).from(locationInventory).innerJoin(products, eq(locationInventory.productId, products.id)).where(filter);
+    taxRate: products.taxRate, isTaxInclusive: products.isTaxInclusive, categoryName: categories.name,
+  }).from(locationInventory).innerJoin(products, eq(locationInventory.productId, products.id)).leftJoin(categories, eq(products.categoryId, categories.id)).where(filter);
 }
 
 export async function listLowStockForLocation(locationId: number) {

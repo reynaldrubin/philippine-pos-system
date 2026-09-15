@@ -2,6 +2,10 @@ import { calculateLoyaltyPoints } from "./posRules";
 
 export type PaymentMethod = "cash" | "gcash" | "maya" | "qrph" | "debit_card" | "credit_card" | "bank_transfer";
 
+export function requiresPaymentReference(method: PaymentMethod) {
+  return method !== "cash";
+}
+
 export function decimalToCentavos(value: string | number): number {
   const normalized = String(value).trim();
   if (!/^\d+(\.\d{1,2})?$/.test(normalized)) throw new Error("PHP amounts must be non-negative with up to two decimal places");
