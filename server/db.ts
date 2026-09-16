@@ -975,6 +975,19 @@ export async function lookupLoyaltyMemberForStaff(identifier: string) {
   return result[0];
 }
 
+export async function listLoyaltyMembersForStaff(search?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const trimmed = search?.trim();
+  const filter = trimmed
+    ? and(eq(loyaltyMembers.status, "active"), or(like(loyaltyMembers.memberNumber, `%${trimmed.toUpperCase()}%`), like(loyaltyMembers.firstName, `%${trimmed}%`), like(loyaltyMembers.lastName, `%${trimmed}%`), like(loyaltyMembers.mobile, `%${trimmed}%`), like(loyaltyMembers.email, `%${trimmed.toLowerCase()}%`)))
+    : eq(loyaltyMembers.status, "active");
+  return db.select({
+    id: loyaltyMembers.id, memberNumber: loyaltyMembers.memberNumber, firstName: loyaltyMembers.firstName, lastName: loyaltyMembers.lastName,
+    mobile: loyaltyMembers.mobile, email: loyaltyMembers.email, joinedAt: loyaltyMembers.joinedAt, currentPoints: loyaltyAccounts.currentPoints,
+  }).from(loyaltyMembers).leftJoin(loyaltyAccounts, eq(loyaltyAccounts.memberId, loyaltyMembers.id)).where(filter).orderBy(desc(loyaltyMembers.joinedAt)).limit(100);
+}
+
 export async function getLoyaltyMemberById(id: number) {
   const db = await getDb();
   if (!db) return undefined;

@@ -30,4 +30,13 @@ describe("parked register orders", () => {
     expect(usePosStore.getState().parkedOrders).toHaveLength(0);
     expect(usePosStore.getState().cart).toHaveLength(0);
   });
+
+  it("adds a product once and leaves quantity changes to explicit plus/minus controls", () => {
+    const item = { productId: 3, sku: "SKU-3", name: "Drill", unitPrice: "6800.00", taxRate: "0.12", isTaxInclusive: false };
+    usePosStore.getState().addCartItem(item);
+    usePosStore.getState().addCartItem(item);
+    expect(usePosStore.getState().cart[0].quantity).toBe("1");
+    usePosStore.getState().updateQuantity(3, "2");
+    expect(usePosStore.getState().cart[0].quantity).toBe("2");
+  });
 });

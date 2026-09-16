@@ -56,6 +56,7 @@ import {
   listInventoryForLocation,
   listLocationsForUser,
   listMemberPointTransactions,
+  listLoyaltyMembersForStaff,
   listMemberPurchases,
   listOpenCashSessionsForLocation,
   listCashSafeDrops,
@@ -682,6 +683,7 @@ export const appRouter = router({
     }),
   }),
   loyalty: router({
+    list: staffProcedure.input(z.object({ search: z.string().trim().max(120).optional() })).query(({ input }) => listLoyaltyMembersForStaff(input.search)),
     lookup: staffProcedure.input(z.object({ identifier: z.string().trim().min(3).max(320) }))
       .query(async ({ input }) => {
         const member = await lookupLoyaltyMemberForStaff(input.identifier);

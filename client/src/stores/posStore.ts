@@ -40,7 +40,7 @@ export const usePosStore = create<PosState>()(
       setSession: ({ accessToken, user, locations, menuKeys = [] }) => { sessionStorage.setItem(STAFF_ACCESS_TOKEN_KEY, accessToken); set({ accessToken, user, locations, menuKeys, activeLocationId: locations.find(location => location.isPrimary)?.id ?? locations[0]?.id ?? null }); },
       clearSession: () => { sessionStorage.removeItem(STAFF_ACCESS_TOKEN_KEY); set({ accessToken: null, user: null, locations: [], menuKeys: [], activeLocationId: null, cart: [], selectedMember: null, parkedOrders: [] }); },
       setActiveLocation: activeLocationId => set({ activeLocationId, cart: [], selectedMember: null }),
-      addCartItem: item => set(state => { const existing = state.cart.find(cartItem => cartItem.productId === item.productId); if (existing) return { cart: state.cart.map(cartItem => cartItem.productId === item.productId ? { ...cartItem, quantity: String(Number(cartItem.quantity) + 1) } : cartItem) }; return { cart: [...state.cart, { ...item, quantity: "1" }] }; }),
+      addCartItem: item => set(state => { const existing = state.cart.find(cartItem => cartItem.productId === item.productId); if (existing) return state; return { cart: [...state.cart, { ...item, quantity: "1" }] }; }),
       updateQuantity: (productId, quantity) => set(state => ({ cart: state.cart.map(item => item.productId === productId ? { ...item, quantity } : item) })),
       removeCartItem: productId => set(state => ({ cart: state.cart.filter(item => item.productId !== productId) })),
       clearCart: () => set({ cart: [], selectedMember: null }),
