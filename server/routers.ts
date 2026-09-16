@@ -707,8 +707,9 @@ export const appRouter = router({
     lookup: staffProcedure.input(z.object({ identifier: z.string().trim().min(3).max(320) }))
       .query(async ({ input }) => {
         const member = await lookupLoyaltyMemberForStaff(input.identifier);
-        if (!member || member.status !== "active") throw new TRPCError({ code: "NOT_FOUND", message: "Active loyalty member was not found" });
-        return member;
+        // Member search is an expected, user-driven miss path. Return null so
+        // an unknown/inactive identifier does not surface as a global API error.
+        return member && member.status === "active" ? member : null;
       }),
     registerMember: staffProcedure
       .input(
