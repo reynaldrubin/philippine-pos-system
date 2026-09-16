@@ -310,6 +310,63 @@ export const locationInventory = mysqlTable(
   ],
 );
 
+export const purchaseRequests = mysqlTable(
+  "purchaseRequests",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    requestNumber: varchar("requestNumber", { length: 48 }).notNull().unique(),
+    locationId: int("locationId").notNull().references(() => locations.id, { onDelete: "restrict" }),
+    requestedById: int("requestedById").notNull().references(() => users.id, { onDelete: "restrict" }),
+    approvedById: int("approvedById").references(() => users.id, { onDelete: "restrict" }),
+    status: mysqlEnum("status", ["draft", "submitted", "approved", "rejected", "converted"]).default("draft").notNull(),
+    note: text("note"),
+    rejectionReason: text("rejectionReason"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    submittedAt: timestamp("submittedAt"),
+    approvedAt: timestamp("approvedAt"),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("purchase_requests_location_status_idx").on(table.locationId, table.status)],
+);
+
+export const purchaseRequestItems = mysqlTable("purchaseRequestItems", {
+  id: int("id").autoincrement().primaryKey(),
+  requestId: int("requestId").notNull().references(() => purchaseRequests.id, { onDelete: "cascade" }),
+  productId: int("productId").notNull().references(() => products.id, { onDelete: "restrict" }),
+  quantityRequested: decimal("quantityRequested", { precision: 14, scale: 3 }).notNull(),
+  note: text("note"),
+}, table => [index("purchase_request_items_request_idx").on(table.requestId)]);
+
+export const purchaseOrders = mysqlTable(
+  "purchaseOrders",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    orderNumber: varchar("orderNumber", { length: 48 }).notNull().unique(),
+    locationId: int("locationId").notNull().references(() => locations.id, { onDelete: "restrict" }),
+    requestId: int("requestId").references(() => purchaseRequests.id, { onDelete: "set null" }),
+    supplierName: varchar("supplierName", { length: 180 }).notNull(),
+    createdById: int("createdById").notNull().references(() => users.id, { onDelete: "restrict" }),
+    approvedById: int("approvedById").references(() => users.id, { onDelete: "restrict" }),
+    status: mysqlEnum("status", ["draft", "submitted", "approved", "ordered", "partially_received", "received", "cancelled"]).default("draft").notNull(),
+    note: text("note"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    approvedAt: timestamp("approvedAt"),
+    orderedAt: timestamp("orderedAt"),
+    receivedAt: timestamp("receivedAt"),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("purchase_orders_location_status_idx").on(table.locationId, table.status)],
+);
+
+export const purchaseOrderItems = mysqlTable("purchaseOrderItems", {
+  id: int("id").autoincrement().primaryKey(),
+  orderId: int("orderId").notNull().references(() => purchaseOrders.id, { onDelete: "cascade" }),
+  productId: int("productId").notNull().references(() => products.id, { onDelete: "restrict" }),
+  quantityOrdered: decimal("quantityOrdered", { precision: 14, scale: 3 }).notNull(),
+  quantityReceived: decimal("quantityReceived", { precision: 14, scale: 3 }).default("0").notNull(),
+  unitCost: decimal("unitCost", { precision: 14, scale: 2 }).default("0").notNull(),
+}, table => [index("purchase_order_items_order_idx").on(table.orderId)]);
+
 export const loyaltyMembers = mysqlTable(
   "loyaltyMembers",
   {

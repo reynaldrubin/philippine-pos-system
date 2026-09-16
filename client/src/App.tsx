@@ -17,6 +17,8 @@ const Overview = lazy(() => import("./pages/Overview"));
 const Register = lazy(() => import("./pages/Register"));
 const Reports = lazy(() => import("./pages/Reports"));
 const Transfers = lazy(() => import("./pages/Transfers"));
+const PurchaseRequests = lazy(() => import("./pages/PurchaseRequests"));
+const PurchaseOrders = lazy(() => import("./pages/PurchaseOrders"));
 const Users = lazy(() => import("./pages/Users"));
 const Compliance = lazy(() => import("./pages/Compliance"));
 const CashControls = lazy(() => import("./pages/CashControls"));
@@ -44,6 +46,8 @@ function Router() {
       <Route path={"/register"}><Protected><Register /></Protected></Route>
       <Route path={"/inventory"}><Protected><Inventory /></Protected></Route>
       <Route path={"/transfers"}><Protected><Transfers /></Protected></Route>
+      <Route path={"/purchase-requests"}><Protected><PurchaseRequests /></Protected></Route>
+      <Route path={"/purchase-orders"}><Protected><PurchaseOrders /></Protected></Route>
       <Route path={"/members"}><Protected><Members /></Protected></Route>
       <Route path={"/operations"}><Protected><Operations /></Protected></Route>
       <Route path={"/reports"}><Protected><Reports /></Protected></Route>

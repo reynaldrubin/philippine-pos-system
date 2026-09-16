@@ -19,6 +19,10 @@ import {
   fiscalDocuments,
   invoiceSeries,
   products,
+  purchaseOrderItems,
+  purchaseOrders,
+  purchaseRequestItems,
+  purchaseRequests,
   receiptDevices,
   registers,
   saleItems,
@@ -973,6 +977,60 @@ export async function lookupLoyaltyMemberForStaff(identifier: string) {
       eq(loyaltyMembers.memberNumber, trimmed.toUpperCase()), eq(loyaltyMembers.mobile, trimmed), eq(loyaltyMembers.email, normalized), eq(loyaltyCards.displayToken, trimmed),
     )).limit(1);
   return result[0];
+}
+
+export async function listPurchaseRequests(locationId: number) {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(purchaseRequests).where(eq(purchaseRequests.locationId, locationId)).orderBy(desc(purchaseRequests.createdAt));
+}
+
+export async function listPurchaseOrders(locationId: number) {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(purchaseOrders).where(eq(purchaseOrders.locationId, locationId)).orderBy(desc(purchaseOrders.createdAt));
+}
+
+export async function getPurchaseRequest(requestId: number) {
+  const db = await getDb(); if (!db) return undefined;
+  const [header] = await db.select().from(purchaseRequests).where(eq(purchaseRequests.id, requestId)).limit(1);
+  if (!header) return undefined;
+  const items = await db.select({ id: purchaseRequestItems.id, requestId: purchaseRequestItems.requestId, productId: purchaseRequestItems.productId, quantityRequested: purchaseRequestItems.quantityRequested, note: purchaseRequestItems.note, productName: products.name, sku: products.sku }).from(purchaseRequestItems).innerJoin(products, eq(purchaseRequestItems.productId, products.id)).where(eq(purchaseRequestItems.requestId, requestId));
+  return { ...header, items };
+}
+
+export async function getPurchaseOrder(orderId: number) {
+  const db = await getDb(); if (!db) return undefined;
+  const [header] = await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, orderId)).limit(1);
+  if (!header) return undefined;
+  const items = await db.select({ id: purchaseOrderItems.id, orderId: purchaseOrderItems.orderId, productId: purchaseOrderItems.productId, quantityOrdered: purchaseOrderItems.quantityOrdered, quantityReceived: purchaseOrderItems.quantityReceived, unitCost: purchaseOrderItems.unitCost, productName: products.name, sku: products.sku }).from(purchaseOrderItems).innerJoin(products, eq(purchaseOrderItems.productId, products.id)).where(eq(purchaseOrderItems.orderId, orderId));
+  return { ...header, items };
+}
+
+export async function createPurchaseRequest(input: { locationId: number; requestedById: number; requestNumber: string; note?: string; items: { productId: number; quantityRequested: string; note?: string }[] }) {
+  const db = await getDb(); if (!db) throw new Error("Database is unavailable");
+  return db.transaction(async tx => { const [result] = await tx.insert(purchaseRequests).values({ locationId: input.locationId, requestedById: input.requestedById, requestNumber: input.requestNumber, note: input.note?.trim() || null }); const requestId = Number(result.insertId); await tx.insert(purchaseRequestItems).values(input.items.map(item => ({ requestId, productId: item.productId, quantityRequested: item.quantityRequested, note: item.note?.trim() || null }))); return requestId; });
+}
+
+export async function updatePurchaseRequestStatus(requestId: number, status: "submitted" | "approved" | "rejected" | "converted", approvedById?: number, rejectionReason?: string) {
+  const db = await getDb(); if (!db) throw new Error("Database is unavailable");
+  const values: any = { status, rejectionReason: rejectionReason?.trim() || null };
+  if (status === "submitted") values.submittedAt = new Date();
+  if (status === "approved") { values.approvedById = approvedById; values.approvedAt = new Date(); }
+  await db.update(purchaseRequests).set(values).where(eq(purchaseRequests.id, requestId));
+}
+
+export async function createPurchaseOrder(input: { locationId: number; requestId?: number; createdById: number; orderNumber: string; supplierName: string; note?: string; items: { productId: number; quantityOrdered: string; unitCost: string }[] }) {
+  const db = await getDb(); if (!db) throw new Error("Database is unavailable");
+  return db.transaction(async tx => { const [result] = await tx.insert(purchaseOrders).values({ locationId: input.locationId, requestId: input.requestId ?? null, createdById: input.createdById, orderNumber: input.orderNumber, supplierName: input.supplierName.trim(), note: input.note?.trim() || null }); const orderId = Number(result.insertId); await tx.insert(purchaseOrderItems).values(input.items.map(item => ({ orderId, productId: item.productId, quantityOrdered: item.quantityOrdered, unitCost: item.unitCost }))); if (input.requestId) await tx.update(purchaseRequests).set({ status: "converted" }).where(eq(purchaseRequests.id, input.requestId)); return orderId; });
+}
+
+export async function updatePurchaseOrderStatus(orderId: number, status: "submitted" | "approved" | "ordered" | "cancelled", approvedById?: number) {
+  const db = await getDb(); if (!db) throw new Error("Database is unavailable");
+  const values: any = { status }; if (status === "approved") { values.approvedById = approvedById; values.approvedAt = new Date(); } if (status === "ordered") values.orderedAt = new Date(); await db.update(purchaseOrders).set(values).where(eq(purchaseOrders.id, orderId));
+}
+
+export async function receivePurchaseOrder(orderId: number, receivedById: number, items: { itemId: number; quantityReceived: string }[]) {
+  const db = await getDb(); if (!db) throw new Error("Database is unavailable");
+  return db.transaction(async tx => { const [order] = await tx.select().from(purchaseOrders).where(eq(purchaseOrders.id, orderId)).limit(1); if (!order || !["ordered", "partially_received"].includes(order.status)) throw new Error("Only ordered purchase orders can be received"); for (const item of items) { const [line] = await tx.select().from(purchaseOrderItems).where(and(eq(purchaseOrderItems.id, item.itemId), eq(purchaseOrderItems.orderId, orderId))).limit(1); if (!line) throw new Error("Purchase order item was not found"); const qty = Number(item.quantityReceived); if (qty <= 0 || qty > Number(line.quantityOrdered) - Number(line.quantityReceived)) throw new Error("Received quantity exceeds the outstanding quantity"); await tx.update(purchaseOrderItems).set({ quantityReceived: sql`${purchaseOrderItems.quantityReceived} + ${qty}` }).where(eq(purchaseOrderItems.id, line.id)); await tx.insert(locationInventory).values({ locationId: order.locationId, productId: line.productId, quantity: qty.toFixed(3) }).onDuplicateKeyUpdate({ set: { quantity: sql`${locationInventory.quantity} + ${qty}` } }); await tx.insert(stockMovements).values({ locationId: order.locationId, productId: line.productId, quantityDelta: qty.toFixed(3), movementType: "receiving", referenceType: "purchase_order", referenceId: orderId, createdById: receivedById }); } const outstanding = await tx.select().from(purchaseOrderItems).where(eq(purchaseOrderItems.orderId, orderId)); const complete = outstanding.every(line => Number(line.quantityReceived) >= Number(line.quantityOrdered)); await tx.update(purchaseOrders).set({ status: complete ? "received" : "partially_received", receivedAt: complete ? new Date() : null }).where(eq(purchaseOrders.id, orderId)); return { complete }; });
 }
 
 export async function listLoyaltyMembersForStaff(search?: string) {

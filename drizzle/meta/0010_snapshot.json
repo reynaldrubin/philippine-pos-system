@@ -1,0 +1,5004 @@
+{
+  "version": "5",
+  "dialect": "mysql",
+  "id": "7ecdd8ff-13a3-487f-aaf2-9d7920f4b732",
+  "prevId": "2aa1fd86-6aae-457d-abba-d81c7a1506a5",
+  "tables": {
+    "auditLogs": {
+      "name": "auditLogs",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "locationId": {
+          "name": "locationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "action": {
+          "name": "action",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "entityType": {
+          "name": "entityType",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "entityId": {
+          "name": "entityId",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "audit_logs_entity_idx": {
+          "name": "audit_logs_entity_idx",
+          "columns": [
+            "entityType",
+            "entityId",
+            "createdAt"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "auditLogs_userId_users_id_fk": {
+          "name": "auditLogs_userId_users_id_fk",
+          "tableFrom": "auditLogs",
+          "tableTo": "users",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "auditLogs_locationId_locations_id_fk": {
+          "name": "auditLogs_locationId_locations_id_fk",
+          "tableFrom": "auditLogs",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "locationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "auditLogs_id": {
+          "name": "auditLogs_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "authRateLimits": {
+      "name": "authRateLimits",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "channel": {
+          "name": "channel",
+          "type": "enum('staff','member')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "keyHash": {
+          "name": "keyHash",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "failures": {
+          "name": "failures",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "windowEndsAt": {
+          "name": "windowEndsAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "auth_rate_limits_channel_key_unique": {
+          "name": "auth_rate_limits_channel_key_unique",
+          "columns": [
+            "channel",
+            "keyHash"
+          ],
+          "isUnique": true
+        },
+        "auth_rate_limits_window_idx": {
+          "name": "auth_rate_limits_window_idx",
+          "columns": [
+            "windowEndsAt"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "authRateLimits_id": {
+          "name": "authRateLimits_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "businessProfiles": {
+      "name": "businessProfiles",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "legalName": {
+          "name": "legalName",
+          "type": "varchar(240)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tradeName": {
+          "name": "tradeName",
+          "type": "varchar(240)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "tin": {
+          "name": "tin",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "vatStatus": {
+          "name": "vatStatus",
+          "type": "enum('vat','non_vat')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "registeredAddress": {
+          "name": "registeredAddress",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "invoiceLabel": {
+          "name": "invoiceLabel",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'Invoice'"
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "business_profiles_active_idx": {
+          "name": "business_profiles_active_idx",
+          "columns": [
+            "isActive"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "businessProfiles_id": {
+          "name": "businessProfiles_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "cashCountEntries": {
+      "name": "cashCountEntries",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "cashSessionId": {
+          "name": "cashSessionId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "denomination": {
+          "name": "denomination",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "countedAmount": {
+          "name": "countedAmount",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "countedById": {
+          "name": "countedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "cash_count_session_denomination_unique": {
+          "name": "cash_count_session_denomination_unique",
+          "columns": [
+            "cashSessionId",
+            "denomination"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "cashCountEntries_cashSessionId_cashSessions_id_fk": {
+          "name": "cashCountEntries_cashSessionId_cashSessions_id_fk",
+          "tableFrom": "cashCountEntries",
+          "tableTo": "cashSessions",
+          "columnsFrom": [
+            "cashSessionId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "cashCountEntries_countedById_users_id_fk": {
+          "name": "cashCountEntries_countedById_users_id_fk",
+          "tableFrom": "cashCountEntries",
+          "tableTo": "users",
+          "columnsFrom": [
+            "countedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "cashCountEntries_id": {
+          "name": "cashCountEntries_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "cashMovements": {
+      "name": "cashMovements",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "locationId": {
+          "name": "locationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "cashSessionId": {
+          "name": "cashSessionId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "enum('cash_in','cash_out')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "category": {
+          "name": "category",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amount": {
+          "name": "amount",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdById": {
+          "name": "createdById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "cash_movements_location_created_idx": {
+          "name": "cash_movements_location_created_idx",
+          "columns": [
+            "locationId",
+            "createdAt"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "cashMovements_locationId_locations_id_fk": {
+          "name": "cashMovements_locationId_locations_id_fk",
+          "tableFrom": "cashMovements",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "locationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "cashMovements_cashSessionId_cashSessions_id_fk": {
+          "name": "cashMovements_cashSessionId_cashSessions_id_fk",
+          "tableFrom": "cashMovements",
+          "tableTo": "cashSessions",
+          "columnsFrom": [
+            "cashSessionId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "cashMovements_createdById_users_id_fk": {
+          "name": "cashMovements_createdById_users_id_fk",
+          "tableFrom": "cashMovements",
+          "tableTo": "users",
+          "columnsFrom": [
+            "createdById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "cashMovements_id": {
+          "name": "cashMovements_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "cashSafeDrops": {
+      "name": "cashSafeDrops",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "cashSessionId": {
+          "name": "cashSessionId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "locationId": {
+          "name": "locationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amount": {
+          "name": "amount",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('pending','approved','rejected')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'pending'"
+        },
+        "createdById": {
+          "name": "createdById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "approvedById": {
+          "name": "approvedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "approvedAt": {
+          "name": "approvedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "cash_safe_drops_session_status_idx": {
+          "name": "cash_safe_drops_session_status_idx",
+          "columns": [
+            "cashSessionId",
+            "status"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "cashSafeDrops_cashSessionId_cashSessions_id_fk": {
+          "name": "cashSafeDrops_cashSessionId_cashSessions_id_fk",
+          "tableFrom": "cashSafeDrops",
+          "tableTo": "cashSessions",
+          "columnsFrom": [
+            "cashSessionId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "cashSafeDrops_locationId_locations_id_fk": {
+          "name": "cashSafeDrops_locationId_locations_id_fk",
+          "tableFrom": "cashSafeDrops",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "locationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "cashSafeDrops_createdById_users_id_fk": {
+          "name": "cashSafeDrops_createdById_users_id_fk",
+          "tableFrom": "cashSafeDrops",
+          "tableTo": "users",
+          "columnsFrom": [
+            "createdById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "cashSafeDrops_approvedById_users_id_fk": {
+          "name": "cashSafeDrops_approvedById_users_id_fk",
+          "tableFrom": "cashSafeDrops",
+          "tableTo": "users",
+          "columnsFrom": [
+            "approvedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "cashSafeDrops_id": {
+          "name": "cashSafeDrops_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "cashSessions": {
+      "name": "cashSessions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "registerId": {
+          "name": "registerId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "openedById": {
+          "name": "openedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "closedById": {
+          "name": "closedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('open','closed')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'open'"
+        },
+        "openingCash": {
+          "name": "openingCash",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expectedCash": {
+          "name": "expectedCash",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'0'"
+        },
+        "closingCash": {
+          "name": "closingCash",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "variance": {
+          "name": "variance",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "varianceReason": {
+          "name": "varianceReason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "varianceApprovalStatus": {
+          "name": "varianceApprovalStatus",
+          "type": "enum('not_required','pending','approved')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'not_required'"
+        },
+        "varianceApprovedById": {
+          "name": "varianceApprovedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "varianceApprovedAt": {
+          "name": "varianceApprovedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "openedAt": {
+          "name": "openedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "closedAt": {
+          "name": "closedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "cash_sessions_register_status_idx": {
+          "name": "cash_sessions_register_status_idx",
+          "columns": [
+            "registerId",
+            "status"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "cashSessions_registerId_registers_id_fk": {
+          "name": "cashSessions_registerId_registers_id_fk",
+          "tableFrom": "cashSessions",
+          "tableTo": "registers",
+          "columnsFrom": [
+            "registerId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "cashSessions_openedById_users_id_fk": {
+          "name": "cashSessions_openedById_users_id_fk",
+          "tableFrom": "cashSessions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "openedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "cashSessions_closedById_users_id_fk": {
+          "name": "cashSessions_closedById_users_id_fk",
+          "tableFrom": "cashSessions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "closedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "cashSessions_varianceApprovedById_users_id_fk": {
+          "name": "cashSessions_varianceApprovedById_users_id_fk",
+          "tableFrom": "cashSessions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "varianceApprovedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "cashSessions_id": {
+          "name": "cashSessions_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "categories": {
+      "name": "categories",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "categories_id": {
+          "name": "categories_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "categories_name_unique": {
+          "name": "categories_name_unique",
+          "columns": [
+            "name"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "fiscalDocuments": {
+      "name": "fiscalDocuments",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "invoiceSeriesId": {
+          "name": "invoiceSeriesId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "locationId": {
+          "name": "locationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "saleId": {
+          "name": "saleId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "documentNumber": {
+          "name": "documentNumber",
+          "type": "varchar(96)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sequenceNumber": {
+          "name": "sequenceNumber",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('allocated','issued','voided')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'allocated'"
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "fiscal_documents_series_number_unique": {
+          "name": "fiscal_documents_series_number_unique",
+          "columns": [
+            "invoiceSeriesId",
+            "documentNumber"
+          ],
+          "isUnique": true
+        },
+        "fiscal_documents_sale_unique": {
+          "name": "fiscal_documents_sale_unique",
+          "columns": [
+            "saleId"
+          ],
+          "isUnique": true
+        },
+        "fiscal_documents_location_created_idx": {
+          "name": "fiscal_documents_location_created_idx",
+          "columns": [
+            "locationId",
+            "createdAt"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "fiscalDocuments_invoiceSeriesId_invoiceSeries_id_fk": {
+          "name": "fiscalDocuments_invoiceSeriesId_invoiceSeries_id_fk",
+          "tableFrom": "fiscalDocuments",
+          "tableTo": "invoiceSeries",
+          "columnsFrom": [
+            "invoiceSeriesId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "fiscalDocuments_locationId_locations_id_fk": {
+          "name": "fiscalDocuments_locationId_locations_id_fk",
+          "tableFrom": "fiscalDocuments",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "locationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "fiscalDocuments_saleId_sales_id_fk": {
+          "name": "fiscalDocuments_saleId_sales_id_fk",
+          "tableFrom": "fiscalDocuments",
+          "tableTo": "sales",
+          "columnsFrom": [
+            "saleId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "fiscalDocuments_id": {
+          "name": "fiscalDocuments_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "invoiceSeries": {
+      "name": "invoiceSeries",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "businessProfileId": {
+          "name": "businessProfileId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "locationId": {
+          "name": "locationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "prefix": {
+          "name": "prefix",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "nextSequence": {
+          "name": "nextSequence",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "numberPadding": {
+          "name": "numberPadding",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 8
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "invoice_series_location_code_unique": {
+          "name": "invoice_series_location_code_unique",
+          "columns": [
+            "locationId",
+            "code"
+          ],
+          "isUnique": true
+        },
+        "invoice_series_location_active_idx": {
+          "name": "invoice_series_location_active_idx",
+          "columns": [
+            "locationId",
+            "isActive"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "invoiceSeries_businessProfileId_businessProfiles_id_fk": {
+          "name": "invoiceSeries_businessProfileId_businessProfiles_id_fk",
+          "tableFrom": "invoiceSeries",
+          "tableTo": "businessProfiles",
+          "columnsFrom": [
+            "businessProfileId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "invoiceSeries_locationId_locations_id_fk": {
+          "name": "invoiceSeries_locationId_locations_id_fk",
+          "tableFrom": "invoiceSeries",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "locationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "invoiceSeries_id": {
+          "name": "invoiceSeries_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "locationInventory": {
+      "name": "locationInventory",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "locationId": {
+          "name": "locationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "productId": {
+          "name": "productId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "decimal(14,3)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'0'"
+        },
+        "reservedQuantity": {
+          "name": "reservedQuantity",
+          "type": "decimal(14,3)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'0'"
+        },
+        "lowStockThreshold": {
+          "name": "lowStockThreshold",
+          "type": "decimal(14,3)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'0'"
+        },
+        "reorderQuantity": {
+          "name": "reorderQuantity",
+          "type": "decimal(14,3)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'0'"
+        },
+        "priceOverride": {
+          "name": "priceOverride",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "location_inventory_unique": {
+          "name": "location_inventory_unique",
+          "columns": [
+            "locationId",
+            "productId"
+          ],
+          "isUnique": true
+        },
+        "location_inventory_low_stock_idx": {
+          "name": "location_inventory_low_stock_idx",
+          "columns": [
+            "locationId",
+            "quantity",
+            "lowStockThreshold"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "locationInventory_locationId_locations_id_fk": {
+          "name": "locationInventory_locationId_locations_id_fk",
+          "tableFrom": "locationInventory",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "locationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "locationInventory_productId_products_id_fk": {
+          "name": "locationInventory_productId_products_id_fk",
+          "tableFrom": "locationInventory",
+          "tableTo": "products",
+          "columnsFrom": [
+            "productId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "locationInventory_id": {
+          "name": "locationInventory_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "locations": {
+      "name": "locations",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "enum('store','branch','warehouse','kiosk')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'store'"
+        },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "city": {
+          "name": "city",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "province": {
+          "name": "province",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "postalCode": {
+          "name": "postalCode",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "phone": {
+          "name": "phone",
+          "type": "varchar(40)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "locations_active_idx": {
+          "name": "locations_active_idx",
+          "columns": [
+            "isActive"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "locations_id": {
+          "name": "locations_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "locations_code_unique": {
+          "name": "locations_code_unique",
+          "columns": [
+            "code"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "loyaltyAccounts": {
+      "name": "loyaltyAccounts",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "memberId": {
+          "name": "memberId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "currentPoints": {
+          "name": "currentPoints",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "lifetimeEarned": {
+          "name": "lifetimeEarned",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "lifetimeRedeemed": {
+          "name": "lifetimeRedeemed",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "loyaltyAccounts_memberId_loyaltyMembers_id_fk": {
+          "name": "loyaltyAccounts_memberId_loyaltyMembers_id_fk",
+          "tableFrom": "loyaltyAccounts",
+          "tableTo": "loyaltyMembers",
+          "columnsFrom": [
+            "memberId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "loyaltyAccounts_id": {
+          "name": "loyaltyAccounts_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "loyaltyAccounts_memberId_unique": {
+          "name": "loyaltyAccounts_memberId_unique",
+          "columns": [
+            "memberId"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "loyaltyCards": {
+      "name": "loyaltyCards",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "memberId": {
+          "name": "memberId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "cardNumber": {
+          "name": "cardNumber",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "displayToken": {
+          "name": "displayToken",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "cardType": {
+          "name": "cardType",
+          "type": "enum('digital')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'digital'"
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('active','revoked','expired')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'active'"
+        },
+        "issuedAt": {
+          "name": "issuedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "expiresAt": {
+          "name": "expiresAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "loyalty_cards_member_status_idx": {
+          "name": "loyalty_cards_member_status_idx",
+          "columns": [
+            "memberId",
+            "status"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "loyaltyCards_memberId_loyaltyMembers_id_fk": {
+          "name": "loyaltyCards_memberId_loyaltyMembers_id_fk",
+          "tableFrom": "loyaltyCards",
+          "tableTo": "loyaltyMembers",
+          "columnsFrom": [
+            "memberId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "loyaltyCards_id": {
+          "name": "loyaltyCards_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "loyaltyCards_cardNumber_unique": {
+          "name": "loyaltyCards_cardNumber_unique",
+          "columns": [
+            "cardNumber"
+          ]
+        },
+        "loyaltyCards_displayToken_unique": {
+          "name": "loyaltyCards_displayToken_unique",
+          "columns": [
+            "displayToken"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "loyaltyMembers": {
+      "name": "loyaltyMembers",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "memberNumber": {
+          "name": "memberNumber",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "firstName": {
+          "name": "firstName",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "lastName": {
+          "name": "lastName",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "mobile": {
+          "name": "mobile",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(320)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "passwordHash": {
+          "name": "passwordHash",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('active','suspended','closed')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'active'"
+        },
+        "joinedLocationId": {
+          "name": "joinedLocationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "joinedAt": {
+          "name": "joinedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "loyalty_members_name_idx": {
+          "name": "loyalty_members_name_idx",
+          "columns": [
+            "lastName",
+            "firstName"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "loyaltyMembers_joinedLocationId_locations_id_fk": {
+          "name": "loyaltyMembers_joinedLocationId_locations_id_fk",
+          "tableFrom": "loyaltyMembers",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "joinedLocationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "loyaltyMembers_id": {
+          "name": "loyaltyMembers_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "loyaltyMembers_memberNumber_unique": {
+          "name": "loyaltyMembers_memberNumber_unique",
+          "columns": [
+            "memberNumber"
+          ]
+        },
+        "loyaltyMembers_mobile_unique": {
+          "name": "loyaltyMembers_mobile_unique",
+          "columns": [
+            "mobile"
+          ]
+        },
+        "loyaltyMembers_email_unique": {
+          "name": "loyaltyMembers_email_unique",
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "loyaltyTransactions": {
+      "name": "loyaltyTransactions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "memberId": {
+          "name": "memberId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "accountId": {
+          "name": "accountId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "enum('earn','reversal','adjustment','redeem')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "points": {
+          "name": "points",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "balanceAfter": {
+          "name": "balanceAfter",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "saleId": {
+          "name": "saleId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "locationId": {
+          "name": "locationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "referenceId": {
+          "name": "referenceId",
+          "type": "varchar(96)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdById": {
+          "name": "createdById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "loyalty_transactions_member_created_idx": {
+          "name": "loyalty_transactions_member_created_idx",
+          "columns": [
+            "memberId",
+            "createdAt"
+          ],
+          "isUnique": false
+        },
+        "loyalty_transactions_sale_idx": {
+          "name": "loyalty_transactions_sale_idx",
+          "columns": [
+            "saleId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "loyaltyTransactions_memberId_loyaltyMembers_id_fk": {
+          "name": "loyaltyTransactions_memberId_loyaltyMembers_id_fk",
+          "tableFrom": "loyaltyTransactions",
+          "tableTo": "loyaltyMembers",
+          "columnsFrom": [
+            "memberId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "loyaltyTransactions_accountId_loyaltyAccounts_id_fk": {
+          "name": "loyaltyTransactions_accountId_loyaltyAccounts_id_fk",
+          "tableFrom": "loyaltyTransactions",
+          "tableTo": "loyaltyAccounts",
+          "columnsFrom": [
+            "accountId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "loyaltyTransactions_saleId_sales_id_fk": {
+          "name": "loyaltyTransactions_saleId_sales_id_fk",
+          "tableFrom": "loyaltyTransactions",
+          "tableTo": "sales",
+          "columnsFrom": [
+            "saleId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "loyaltyTransactions_locationId_locations_id_fk": {
+          "name": "loyaltyTransactions_locationId_locations_id_fk",
+          "tableFrom": "loyaltyTransactions",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "locationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "loyaltyTransactions_createdById_users_id_fk": {
+          "name": "loyaltyTransactions_createdById_users_id_fk",
+          "tableFrom": "loyaltyTransactions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "createdById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "loyaltyTransactions_id": {
+          "name": "loyaltyTransactions_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "payments": {
+      "name": "payments",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "saleId": {
+          "name": "saleId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "locationId": {
+          "name": "locationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "method": {
+          "name": "method",
+          "type": "enum('cash','gcash','maya','qrph','debit_card','credit_card','bank_transfer')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'mock'"
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('authorized','paid','failed','cancelled','refunded')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'authorized'"
+        },
+        "amount": {
+          "name": "amount",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amountTendered": {
+          "name": "amountTendered",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "changeAmount": {
+          "name": "changeAmount",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'0'"
+        },
+        "reference": {
+          "name": "reference",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "processedAt": {
+          "name": "processedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "payments_sale_idx": {
+          "name": "payments_sale_idx",
+          "columns": [
+            "saleId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "payments_saleId_sales_id_fk": {
+          "name": "payments_saleId_sales_id_fk",
+          "tableFrom": "payments",
+          "tableTo": "sales",
+          "columnsFrom": [
+            "saleId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "payments_locationId_locations_id_fk": {
+          "name": "payments_locationId_locations_id_fk",
+          "tableFrom": "payments",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "locationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "payments_id": {
+          "name": "payments_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "products": {
+      "name": "products",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "sku": {
+          "name": "sku",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(180)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "categoryId": {
+          "name": "categoryId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "price": {
+          "name": "price",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "costPrice": {
+          "name": "costPrice",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'0'"
+        },
+        "taxRate": {
+          "name": "taxRate",
+          "type": "decimal(6,4)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'0.12'"
+        },
+        "isTaxInclusive": {
+          "name": "isTaxInclusive",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "products_category_active_idx": {
+          "name": "products_category_active_idx",
+          "columns": [
+            "categoryId",
+            "isActive"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "products_categoryId_categories_id_fk": {
+          "name": "products_categoryId_categories_id_fk",
+          "tableFrom": "products",
+          "tableTo": "categories",
+          "columnsFrom": [
+            "categoryId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "products_id": {
+          "name": "products_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "products_sku_unique": {
+          "name": "products_sku_unique",
+          "columns": [
+            "sku"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "purchaseOrderItems": {
+      "name": "purchaseOrderItems",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "orderId": {
+          "name": "orderId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "productId": {
+          "name": "productId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantityOrdered": {
+          "name": "quantityOrdered",
+          "type": "decimal(14,3)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantityReceived": {
+          "name": "quantityReceived",
+          "type": "decimal(14,3)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'0'"
+        },
+        "unitCost": {
+          "name": "unitCost",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'0'"
+        }
+      },
+      "indexes": {
+        "purchase_order_items_order_idx": {
+          "name": "purchase_order_items_order_idx",
+          "columns": [
+            "orderId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "purchaseOrderItems_orderId_purchaseOrders_id_fk": {
+          "name": "purchaseOrderItems_orderId_purchaseOrders_id_fk",
+          "tableFrom": "purchaseOrderItems",
+          "tableTo": "purchaseOrders",
+          "columnsFrom": [
+            "orderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "purchaseOrderItems_productId_products_id_fk": {
+          "name": "purchaseOrderItems_productId_products_id_fk",
+          "tableFrom": "purchaseOrderItems",
+          "tableTo": "products",
+          "columnsFrom": [
+            "productId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "purchaseOrderItems_id": {
+          "name": "purchaseOrderItems_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "purchaseOrders": {
+      "name": "purchaseOrders",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "orderNumber": {
+          "name": "orderNumber",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "locationId": {
+          "name": "locationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "requestId": {
+          "name": "requestId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "supplierName": {
+          "name": "supplierName",
+          "type": "varchar(180)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdById": {
+          "name": "createdById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "approvedById": {
+          "name": "approvedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('draft','submitted','approved','ordered','partially_received','received','cancelled')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'draft'"
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "approvedAt": {
+          "name": "approvedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "orderedAt": {
+          "name": "orderedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "receivedAt": {
+          "name": "receivedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "purchase_orders_location_status_idx": {
+          "name": "purchase_orders_location_status_idx",
+          "columns": [
+            "locationId",
+            "status"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "purchaseOrders_locationId_locations_id_fk": {
+          "name": "purchaseOrders_locationId_locations_id_fk",
+          "tableFrom": "purchaseOrders",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "locationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "purchaseOrders_requestId_purchaseRequests_id_fk": {
+          "name": "purchaseOrders_requestId_purchaseRequests_id_fk",
+          "tableFrom": "purchaseOrders",
+          "tableTo": "purchaseRequests",
+          "columnsFrom": [
+            "requestId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "purchaseOrders_createdById_users_id_fk": {
+          "name": "purchaseOrders_createdById_users_id_fk",
+          "tableFrom": "purchaseOrders",
+          "tableTo": "users",
+          "columnsFrom": [
+            "createdById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "purchaseOrders_approvedById_users_id_fk": {
+          "name": "purchaseOrders_approvedById_users_id_fk",
+          "tableFrom": "purchaseOrders",
+          "tableTo": "users",
+          "columnsFrom": [
+            "approvedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "purchaseOrders_id": {
+          "name": "purchaseOrders_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "purchaseOrders_orderNumber_unique": {
+          "name": "purchaseOrders_orderNumber_unique",
+          "columns": [
+            "orderNumber"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "purchaseRequestItems": {
+      "name": "purchaseRequestItems",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "requestId": {
+          "name": "requestId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "productId": {
+          "name": "productId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantityRequested": {
+          "name": "quantityRequested",
+          "type": "decimal(14,3)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "purchase_request_items_request_idx": {
+          "name": "purchase_request_items_request_idx",
+          "columns": [
+            "requestId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "purchaseRequestItems_requestId_purchaseRequests_id_fk": {
+          "name": "purchaseRequestItems_requestId_purchaseRequests_id_fk",
+          "tableFrom": "purchaseRequestItems",
+          "tableTo": "purchaseRequests",
+          "columnsFrom": [
+            "requestId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "purchaseRequestItems_productId_products_id_fk": {
+          "name": "purchaseRequestItems_productId_products_id_fk",
+          "tableFrom": "purchaseRequestItems",
+          "tableTo": "products",
+          "columnsFrom": [
+            "productId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "purchaseRequestItems_id": {
+          "name": "purchaseRequestItems_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "purchaseRequests": {
+      "name": "purchaseRequests",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "requestNumber": {
+          "name": "requestNumber",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "locationId": {
+          "name": "locationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "requestedById": {
+          "name": "requestedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "approvedById": {
+          "name": "approvedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('draft','submitted','approved','rejected','converted')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'draft'"
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "rejectionReason": {
+          "name": "rejectionReason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "submittedAt": {
+          "name": "submittedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "approvedAt": {
+          "name": "approvedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "purchase_requests_location_status_idx": {
+          "name": "purchase_requests_location_status_idx",
+          "columns": [
+            "locationId",
+            "status"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "purchaseRequests_locationId_locations_id_fk": {
+          "name": "purchaseRequests_locationId_locations_id_fk",
+          "tableFrom": "purchaseRequests",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "locationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "purchaseRequests_requestedById_users_id_fk": {
+          "name": "purchaseRequests_requestedById_users_id_fk",
+          "tableFrom": "purchaseRequests",
+          "tableTo": "users",
+          "columnsFrom": [
+            "requestedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "purchaseRequests_approvedById_users_id_fk": {
+          "name": "purchaseRequests_approvedById_users_id_fk",
+          "tableFrom": "purchaseRequests",
+          "tableTo": "users",
+          "columnsFrom": [
+            "approvedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "purchaseRequests_id": {
+          "name": "purchaseRequests_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "purchaseRequests_requestNumber_unique": {
+          "name": "purchaseRequests_requestNumber_unique",
+          "columns": [
+            "requestNumber"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "receiptDevices": {
+      "name": "receiptDevices",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "locationId": {
+          "name": "locationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "invoiceSeriesId": {
+          "name": "invoiceSeriesId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(40)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "serialNumber": {
+          "name": "serialNumber",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "permitNumber": {
+          "name": "permitNumber",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "receipt_devices_location_code_unique": {
+          "name": "receipt_devices_location_code_unique",
+          "columns": [
+            "locationId",
+            "code"
+          ],
+          "isUnique": true
+        },
+        "receipt_devices_series_active_idx": {
+          "name": "receipt_devices_series_active_idx",
+          "columns": [
+            "invoiceSeriesId",
+            "isActive"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "receiptDevices_locationId_locations_id_fk": {
+          "name": "receiptDevices_locationId_locations_id_fk",
+          "tableFrom": "receiptDevices",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "locationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "receiptDevices_invoiceSeriesId_invoiceSeries_id_fk": {
+          "name": "receiptDevices_invoiceSeriesId_invoiceSeries_id_fk",
+          "tableFrom": "receiptDevices",
+          "tableTo": "invoiceSeries",
+          "columnsFrom": [
+            "invoiceSeriesId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "receiptDevices_id": {
+          "name": "receiptDevices_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "receipts": {
+      "name": "receipts",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "saleId": {
+          "name": "saleId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "receiptNumber": {
+          "name": "receiptNumber",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "format": {
+          "name": "format",
+          "type": "enum('digital')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'digital'"
+        },
+        "content": {
+          "name": "content",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "receipts_saleId_sales_id_fk": {
+          "name": "receipts_saleId_sales_id_fk",
+          "tableFrom": "receipts",
+          "tableTo": "sales",
+          "columnsFrom": [
+            "saleId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "receipts_id": {
+          "name": "receipts_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "receipts_saleId_unique": {
+          "name": "receipts_saleId_unique",
+          "columns": [
+            "saleId"
+          ]
+        },
+        "receipts_receiptNumber_unique": {
+          "name": "receipts_receiptNumber_unique",
+          "columns": [
+            "receiptNumber"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "registers": {
+      "name": "registers",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "locationId": {
+          "name": "locationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(40)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "register_location_code_unique": {
+          "name": "register_location_code_unique",
+          "columns": [
+            "locationId",
+            "code"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "registers_locationId_locations_id_fk": {
+          "name": "registers_locationId_locations_id_fk",
+          "tableFrom": "registers",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "locationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "registers_id": {
+          "name": "registers_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "returnPayments": {
+      "name": "returnPayments",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "returnId": {
+          "name": "returnId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "originalPaymentId": {
+          "name": "originalPaymentId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "method": {
+          "name": "method",
+          "type": "enum('cash','gcash','maya','qrph','debit_card','credit_card','bank_transfer')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'mock'"
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('refunded')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'refunded'"
+        },
+        "amount": {
+          "name": "amount",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reference": {
+          "name": "reference",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "processedAt": {
+          "name": "processedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "return_payments_return_idx": {
+          "name": "return_payments_return_idx",
+          "columns": [
+            "returnId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "returnPayments_returnId_saleReturns_id_fk": {
+          "name": "returnPayments_returnId_saleReturns_id_fk",
+          "tableFrom": "returnPayments",
+          "tableTo": "saleReturns",
+          "columnsFrom": [
+            "returnId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "returnPayments_originalPaymentId_payments_id_fk": {
+          "name": "returnPayments_originalPaymentId_payments_id_fk",
+          "tableFrom": "returnPayments",
+          "tableTo": "payments",
+          "columnsFrom": [
+            "originalPaymentId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "returnPayments_id": {
+          "name": "returnPayments_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "saleItems": {
+      "name": "saleItems",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "saleId": {
+          "name": "saleId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "productId": {
+          "name": "productId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "skuSnapshot": {
+          "name": "skuSnapshot",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "nameSnapshot": {
+          "name": "nameSnapshot",
+          "type": "varchar(180)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "unitPrice": {
+          "name": "unitPrice",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "decimal(14,3)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "taxRate": {
+          "name": "taxRate",
+          "type": "decimal(6,4)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'0'"
+        },
+        "taxAmount": {
+          "name": "taxAmount",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'0'"
+        },
+        "lineTotal": {
+          "name": "lineTotal",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "sale_items_sale_idx": {
+          "name": "sale_items_sale_idx",
+          "columns": [
+            "saleId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "saleItems_saleId_sales_id_fk": {
+          "name": "saleItems_saleId_sales_id_fk",
+          "tableFrom": "saleItems",
+          "tableTo": "sales",
+          "columnsFrom": [
+            "saleId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "saleItems_productId_products_id_fk": {
+          "name": "saleItems_productId_products_id_fk",
+          "tableFrom": "saleItems",
+          "tableTo": "products",
+          "columnsFrom": [
+            "productId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "saleItems_id": {
+          "name": "saleItems_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "saleReturnItems": {
+      "name": "saleReturnItems",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "returnId": {
+          "name": "returnId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "saleItemId": {
+          "name": "saleItemId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "productId": {
+          "name": "productId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "decimal(14,3)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "refundAmount": {
+          "name": "refundAmount",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "sale_return_item_unique": {
+          "name": "sale_return_item_unique",
+          "columns": [
+            "returnId",
+            "saleItemId"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "saleReturnItems_returnId_saleReturns_id_fk": {
+          "name": "saleReturnItems_returnId_saleReturns_id_fk",
+          "tableFrom": "saleReturnItems",
+          "tableTo": "saleReturns",
+          "columnsFrom": [
+            "returnId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "saleReturnItems_saleItemId_saleItems_id_fk": {
+          "name": "saleReturnItems_saleItemId_saleItems_id_fk",
+          "tableFrom": "saleReturnItems",
+          "tableTo": "saleItems",
+          "columnsFrom": [
+            "saleItemId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "saleReturnItems_productId_products_id_fk": {
+          "name": "saleReturnItems_productId_products_id_fk",
+          "tableFrom": "saleReturnItems",
+          "tableTo": "products",
+          "columnsFrom": [
+            "productId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "saleReturnItems_id": {
+          "name": "saleReturnItems_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "saleReturns": {
+      "name": "saleReturns",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "returnNumber": {
+          "name": "returnNumber",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "saleId": {
+          "name": "saleId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "locationId": {
+          "name": "locationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "cashSessionId": {
+          "name": "cashSessionId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('completed')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'completed'"
+        },
+        "reasonCode": {
+          "name": "reasonCode",
+          "type": "enum('customer_change_mind','damaged','wrong_item','pricing_error','other')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reasonNote": {
+          "name": "reasonNote",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "refundAmount": {
+          "name": "refundAmount",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "refundMethod": {
+          "name": "refundMethod",
+          "type": "enum('cash','gcash','maya','qrph','debit_card','credit_card','bank_transfer')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "exchangeSaleId": {
+          "name": "exchangeSaleId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "processedById": {
+          "name": "processedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "approvedById": {
+          "name": "approvedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "sale_returns_sale_created_idx": {
+          "name": "sale_returns_sale_created_idx",
+          "columns": [
+            "saleId",
+            "createdAt"
+          ],
+          "isUnique": false
+        },
+        "sale_returns_location_created_idx": {
+          "name": "sale_returns_location_created_idx",
+          "columns": [
+            "locationId",
+            "createdAt"
+          ],
+          "isUnique": false
+        },
+        "sale_returns_exchange_sale_unique": {
+          "name": "sale_returns_exchange_sale_unique",
+          "columns": [
+            "exchangeSaleId"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "saleReturns_saleId_sales_id_fk": {
+          "name": "saleReturns_saleId_sales_id_fk",
+          "tableFrom": "saleReturns",
+          "tableTo": "sales",
+          "columnsFrom": [
+            "saleId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "saleReturns_locationId_locations_id_fk": {
+          "name": "saleReturns_locationId_locations_id_fk",
+          "tableFrom": "saleReturns",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "locationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "saleReturns_cashSessionId_cashSessions_id_fk": {
+          "name": "saleReturns_cashSessionId_cashSessions_id_fk",
+          "tableFrom": "saleReturns",
+          "tableTo": "cashSessions",
+          "columnsFrom": [
+            "cashSessionId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "saleReturns_exchangeSaleId_sales_id_fk": {
+          "name": "saleReturns_exchangeSaleId_sales_id_fk",
+          "tableFrom": "saleReturns",
+          "tableTo": "sales",
+          "columnsFrom": [
+            "exchangeSaleId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "saleReturns_processedById_users_id_fk": {
+          "name": "saleReturns_processedById_users_id_fk",
+          "tableFrom": "saleReturns",
+          "tableTo": "users",
+          "columnsFrom": [
+            "processedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "saleReturns_approvedById_users_id_fk": {
+          "name": "saleReturns_approvedById_users_id_fk",
+          "tableFrom": "saleReturns",
+          "tableTo": "users",
+          "columnsFrom": [
+            "approvedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "saleReturns_id": {
+          "name": "saleReturns_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "saleReturns_returnNumber_unique": {
+          "name": "saleReturns_returnNumber_unique",
+          "columns": [
+            "returnNumber"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "sales": {
+      "name": "sales",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "receiptNumber": {
+          "name": "receiptNumber",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "locationId": {
+          "name": "locationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "registerId": {
+          "name": "registerId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "cashSessionId": {
+          "name": "cashSessionId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "cashierId": {
+          "name": "cashierId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "memberId": {
+          "name": "memberId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('completed','voided')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'completed'"
+        },
+        "subtotal": {
+          "name": "subtotal",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "taxAmount": {
+          "name": "taxAmount",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'0'"
+        },
+        "discountAmount": {
+          "name": "discountAmount",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'0'"
+        },
+        "totalAmount": {
+          "name": "totalAmount",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "qualifyingAmount": {
+          "name": "qualifyingAmount",
+          "type": "decimal(14,2)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'0'"
+        },
+        "pointsEarned": {
+          "name": "pointsEarned",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "idempotencyKey": {
+          "name": "idempotencyKey",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "voidedById": {
+          "name": "voidedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "voidedAt": {
+          "name": "voidedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "voidReason": {
+          "name": "voidReason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "sales_location_created_idx": {
+          "name": "sales_location_created_idx",
+          "columns": [
+            "locationId",
+            "createdAt"
+          ],
+          "isUnique": false
+        },
+        "sales_member_created_idx": {
+          "name": "sales_member_created_idx",
+          "columns": [
+            "memberId",
+            "createdAt"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "sales_locationId_locations_id_fk": {
+          "name": "sales_locationId_locations_id_fk",
+          "tableFrom": "sales",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "locationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "sales_registerId_registers_id_fk": {
+          "name": "sales_registerId_registers_id_fk",
+          "tableFrom": "sales",
+          "tableTo": "registers",
+          "columnsFrom": [
+            "registerId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "sales_cashSessionId_cashSessions_id_fk": {
+          "name": "sales_cashSessionId_cashSessions_id_fk",
+          "tableFrom": "sales",
+          "tableTo": "cashSessions",
+          "columnsFrom": [
+            "cashSessionId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "sales_cashierId_users_id_fk": {
+          "name": "sales_cashierId_users_id_fk",
+          "tableFrom": "sales",
+          "tableTo": "users",
+          "columnsFrom": [
+            "cashierId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "sales_memberId_loyaltyMembers_id_fk": {
+          "name": "sales_memberId_loyaltyMembers_id_fk",
+          "tableFrom": "sales",
+          "tableTo": "loyaltyMembers",
+          "columnsFrom": [
+            "memberId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "sales_voidedById_users_id_fk": {
+          "name": "sales_voidedById_users_id_fk",
+          "tableFrom": "sales",
+          "tableTo": "users",
+          "columnsFrom": [
+            "voidedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "sales_id": {
+          "name": "sales_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "sales_receiptNumber_unique": {
+          "name": "sales_receiptNumber_unique",
+          "columns": [
+            "receiptNumber"
+          ]
+        },
+        "sales_idempotencyKey_unique": {
+          "name": "sales_idempotencyKey_unique",
+          "columns": [
+            "idempotencyKey"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "staffAttendance": {
+      "name": "staffAttendance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "locationId": {
+          "name": "locationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "eventType": {
+          "name": "eventType",
+          "type": "enum('time_in','time_out')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "recordedById": {
+          "name": "recordedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "staff_attendance_location_created_idx": {
+          "name": "staff_attendance_location_created_idx",
+          "columns": [
+            "locationId",
+            "createdAt"
+          ],
+          "isUnique": false
+        },
+        "staff_attendance_user_created_idx": {
+          "name": "staff_attendance_user_created_idx",
+          "columns": [
+            "userId",
+            "createdAt"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "staffAttendance_userId_users_id_fk": {
+          "name": "staffAttendance_userId_users_id_fk",
+          "tableFrom": "staffAttendance",
+          "tableTo": "users",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "staffAttendance_locationId_locations_id_fk": {
+          "name": "staffAttendance_locationId_locations_id_fk",
+          "tableFrom": "staffAttendance",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "locationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "staffAttendance_recordedById_users_id_fk": {
+          "name": "staffAttendance_recordedById_users_id_fk",
+          "tableFrom": "staffAttendance",
+          "tableTo": "users",
+          "columnsFrom": [
+            "recordedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "staffAttendance_id": {
+          "name": "staffAttendance_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "staffMenuAssignments": {
+      "name": "staffMenuAssignments",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "menuKey": {
+          "name": "menuKey",
+          "type": "enum('overview','register','inventory','transfers','members','operations','reports','users','compliance')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "isEnabled": {
+          "name": "isEnabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "staff_menu_assignment_unique": {
+          "name": "staff_menu_assignment_unique",
+          "columns": [
+            "userId",
+            "menuKey"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "staffMenuAssignments_userId_users_id_fk": {
+          "name": "staffMenuAssignments_userId_users_id_fk",
+          "tableFrom": "staffMenuAssignments",
+          "tableTo": "users",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "staffMenuAssignments_id": {
+          "name": "staffMenuAssignments_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "stockMovements": {
+      "name": "stockMovements",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "locationId": {
+          "name": "locationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "productId": {
+          "name": "productId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantityDelta": {
+          "name": "quantityDelta",
+          "type": "decimal(14,3)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "movementType": {
+          "name": "movementType",
+          "type": "enum('receiving','sale','void','return','adjustment','transfer_shipment','transfer_receipt')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "referenceType": {
+          "name": "referenceType",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "referenceId": {
+          "name": "referenceId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdById": {
+          "name": "createdById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "stock_movements_location_product_idx": {
+          "name": "stock_movements_location_product_idx",
+          "columns": [
+            "locationId",
+            "productId",
+            "createdAt"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "stockMovements_locationId_locations_id_fk": {
+          "name": "stockMovements_locationId_locations_id_fk",
+          "tableFrom": "stockMovements",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "locationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "stockMovements_productId_products_id_fk": {
+          "name": "stockMovements_productId_products_id_fk",
+          "tableFrom": "stockMovements",
+          "tableTo": "products",
+          "columnsFrom": [
+            "productId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "stockMovements_createdById_users_id_fk": {
+          "name": "stockMovements_createdById_users_id_fk",
+          "tableFrom": "stockMovements",
+          "tableTo": "users",
+          "columnsFrom": [
+            "createdById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "stockMovements_id": {
+          "name": "stockMovements_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "stockTransferItems": {
+      "name": "stockTransferItems",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "transferId": {
+          "name": "transferId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "productId": {
+          "name": "productId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantityRequested": {
+          "name": "quantityRequested",
+          "type": "decimal(14,3)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantityShipped": {
+          "name": "quantityShipped",
+          "type": "decimal(14,3)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'0'"
+        },
+        "quantityReceived": {
+          "name": "quantityReceived",
+          "type": "decimal(14,3)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'0'"
+        }
+      },
+      "indexes": {
+        "stock_transfer_product_unique": {
+          "name": "stock_transfer_product_unique",
+          "columns": [
+            "transferId",
+            "productId"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "stockTransferItems_transferId_stockTransfers_id_fk": {
+          "name": "stockTransferItems_transferId_stockTransfers_id_fk",
+          "tableFrom": "stockTransferItems",
+          "tableTo": "stockTransfers",
+          "columnsFrom": [
+            "transferId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "stockTransferItems_productId_products_id_fk": {
+          "name": "stockTransferItems_productId_products_id_fk",
+          "tableFrom": "stockTransferItems",
+          "tableTo": "products",
+          "columnsFrom": [
+            "productId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "stockTransferItems_id": {
+          "name": "stockTransferItems_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "stockTransfers": {
+      "name": "stockTransfers",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "transferNumber": {
+          "name": "transferNumber",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sourceLocationId": {
+          "name": "sourceLocationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "destinationLocationId": {
+          "name": "destinationLocationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('requested','shipped','received','cancelled')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'requested'"
+        },
+        "requestedById": {
+          "name": "requestedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "shippedById": {
+          "name": "shippedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "receivedById": {
+          "name": "receivedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "requestedAt": {
+          "name": "requestedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "shippedAt": {
+          "name": "shippedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "receivedAt": {
+          "name": "receivedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "stock_transfers_locations_status_idx": {
+          "name": "stock_transfers_locations_status_idx",
+          "columns": [
+            "sourceLocationId",
+            "destinationLocationId",
+            "status"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "stockTransfers_sourceLocationId_locations_id_fk": {
+          "name": "stockTransfers_sourceLocationId_locations_id_fk",
+          "tableFrom": "stockTransfers",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "sourceLocationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "stockTransfers_destinationLocationId_locations_id_fk": {
+          "name": "stockTransfers_destinationLocationId_locations_id_fk",
+          "tableFrom": "stockTransfers",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "destinationLocationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "stockTransfers_requestedById_users_id_fk": {
+          "name": "stockTransfers_requestedById_users_id_fk",
+          "tableFrom": "stockTransfers",
+          "tableTo": "users",
+          "columnsFrom": [
+            "requestedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "stockTransfers_shippedById_users_id_fk": {
+          "name": "stockTransfers_shippedById_users_id_fk",
+          "tableFrom": "stockTransfers",
+          "tableTo": "users",
+          "columnsFrom": [
+            "shippedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "stockTransfers_receivedById_users_id_fk": {
+          "name": "stockTransfers_receivedById_users_id_fk",
+          "tableFrom": "stockTransfers",
+          "tableTo": "users",
+          "columnsFrom": [
+            "receivedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "stockTransfers_id": {
+          "name": "stockTransfers_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "stockTransfers_transferNumber_unique": {
+          "name": "stockTransfers_transferNumber_unique",
+          "columns": [
+            "transferNumber"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "systemSettings": {
+      "name": "systemSettings",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "key": {
+          "name": "key",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updatedById": {
+          "name": "updatedById",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "systemSettings_updatedById_users_id_fk": {
+          "name": "systemSettings_updatedById_users_id_fk",
+          "tableFrom": "systemSettings",
+          "tableTo": "users",
+          "columnsFrom": [
+            "updatedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "systemSettings_id": {
+          "name": "systemSettings_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "systemSettings_key_unique": {
+          "name": "systemSettings_key_unique",
+          "columns": [
+            "key"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    },
+    "taxRegistrations": {
+      "name": "taxRegistrations",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "businessProfileId": {
+          "name": "businessProfileId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "birRdoCode": {
+          "name": "birRdoCode",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "certificateNumber": {
+          "name": "certificateNumber",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "effectiveFrom": {
+          "name": "effectiveFrom",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "effectiveTo": {
+          "name": "effectiveTo",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('active','inactive')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'active'"
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "tax_registrations_profile_status_idx": {
+          "name": "tax_registrations_profile_status_idx",
+          "columns": [
+            "businessProfileId",
+            "status"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "taxRegistrations_businessProfileId_businessProfiles_id_fk": {
+          "name": "taxRegistrations_businessProfileId_businessProfiles_id_fk",
+          "tableFrom": "taxRegistrations",
+          "tableTo": "businessProfiles",
+          "columnsFrom": [
+            "businessProfileId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "taxRegistrations_id": {
+          "name": "taxRegistrations_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "userLocations": {
+      "name": "userLocations",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "locationId": {
+          "name": "locationId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "isPrimary": {
+          "name": "isPrimary",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "user_locations_unique": {
+          "name": "user_locations_unique",
+          "columns": [
+            "userId",
+            "locationId"
+          ],
+          "isUnique": true
+        },
+        "user_locations_location_idx": {
+          "name": "user_locations_location_idx",
+          "columns": [
+            "locationId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "userLocations_userId_users_id_fk": {
+          "name": "userLocations_userId_users_id_fk",
+          "tableFrom": "userLocations",
+          "tableTo": "users",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "userLocations_locationId_locations_id_fk": {
+          "name": "userLocations_locationId_locations_id_fk",
+          "tableFrom": "userLocations",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "locationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "userLocations_id": {
+          "name": "userLocations_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "users": {
+      "name": "users",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "openId": {
+          "name": "openId",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(320)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "passwordHash": {
+          "name": "passwordHash",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "loginMethod": {
+          "name": "loginMethod",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "role": {
+          "name": "role",
+          "type": "enum('user','cashier','manager','admin')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'cashier'"
+        },
+        "jobTitle": {
+          "name": "jobTitle",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        },
+        "lastSignedIn": {
+          "name": "lastSignedIn",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "users_id": {
+          "name": "users_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "users_openId_unique": {
+          "name": "users_openId_unique",
+          "columns": [
+            "openId"
+          ]
+        },
+        "users_email_unique": {
+          "name": "users_email_unique",
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "checkConstraint": {}
+    }
+  },
+  "views": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "tables": {},
+    "indexes": {}
+  }
+}

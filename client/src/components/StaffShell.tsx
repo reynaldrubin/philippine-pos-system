@@ -2,7 +2,7 @@ import { formatRole } from "@/lib/currency";
 import { StaffMenuKey, StaffRole, usePosStore } from "@/stores/posStore";
 import { trpc } from "@/lib/trpc";
 import {
-  ArrowLeftRight, BadgePercent, BarChart3, ChevronDown, ClipboardCheck, LayoutDashboard, LogOut, Menu, Package, ReceiptText, Settings2, ShoppingCart, Store, Undo2, UsersRound, UserCog, WalletCards,
+  ArrowLeftRight, BadgePercent, BarChart3, ChevronDown, ChevronRight, ClipboardCheck, LayoutDashboard, LogOut, Menu, Package, ReceiptText, Settings2, ShoppingCart, Store, Undo2, UsersRound, UserCog, WalletCards,
 } from "lucide-react";
 import React, { ReactNode, useEffect, useState } from "react";
 import { useLocation } from "wouter";
@@ -18,8 +18,8 @@ const navigation = [
   { group: "Inventory", items: [
     { path: "/inventory", key: "inventory", label: "Products & stock", icon: Package, roles: ["manager", "admin"] },
     { path: "/transfers", key: "transfers", label: "Transfers", icon: ArrowLeftRight, roles: ["manager", "admin"] },
-    { path: "/purchase-requests", key: "inventory", label: "Purchase requests", icon: ClipboardCheck, roles: ["manager", "admin"], disabled: true },
-    { path: "/purchase-orders", key: "inventory", label: "Purchase orders", icon: ReceiptText, roles: ["manager", "admin"], disabled: true },
+    { path: "/purchase-requests", key: "inventory", label: "Purchase requests", icon: ClipboardCheck, roles: ["manager", "admin"] },
+    { path: "/purchase-orders", key: "inventory", label: "Purchase orders", icon: ReceiptText, roles: ["manager", "admin"] },
   ]},
   { group: "Operations", items: [
     { path: "/operations", key: "operations", label: "Cash drawer & attendance", icon: Settings2, roles: ["manager", "admin"] },
@@ -43,6 +43,7 @@ const navigation = [
 export default function StaffShell({ children }: StaffShellProps) {
   const [location, setLocation] = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ Workspace: true, Inventory: true, Operations: true, Financials: true, Reports: true, Configuration: true });
   const { accessToken, user, locations, menuKeys, activeLocationId, setActiveLocation, setSession, clearSession } = usePosStore();
   const profile = trpc.staffAuth.me.useQuery(undefined, { enabled: Boolean(accessToken), retry: false });
 
@@ -82,11 +83,12 @@ export default function StaffShell({ children }: StaffShellProps) {
           <span><span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-[#b9c8c0]">Philippine retail OS</span><span className="text-lg font-semibold tracking-tight">PosQ</span></span>
         </button>
         <nav className="space-y-1">
-          {visibleNavigation.map(group => <div key={group.group} className="mb-5"><p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#829b90]">{group.group}</p>{group.items.map(item => {
+          {visibleNavigation.map(group => <div key={group.group} className="mb-3"><button type="button" aria-label={`${group.group} submenu`} onClick={() => setExpandedGroups(current => ({ ...current, [group.group]: !current[group.group] }))} className="mb-1 flex w-full items-center justify-between px-3 py-2 text-left text-[10px] font-bold uppercase tracking-[0.16em] text-[#829b90] hover:text-white"><span aria-hidden="true">{group.group}</span><ChevronRight className={`h-3.5 w-3.5 transition-transform ${expandedGroups[group.group] ? "rotate-90" : ""}`} /></button>{expandedGroups[group.group] && group.items.map(item => {
             const Icon = item.icon;
-            const active = location === item.path && !item.disabled;
-            return <button key={`${group.group}-${item.label}`} disabled={item.disabled} onClick={() => { if (!item.disabled) { setLocation(item.path); setMenuOpen(false); } }} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${item.disabled ? "cursor-not-allowed text-[#6f877c]" : active ? "bg-[#25463d] text-white" : "text-[#c9d7d0] hover:bg-[#1d3831] hover:text-white"}`}>
-              <Icon className="h-4 w-4" /> <span>{item.label}</span>{item.disabled && <span className="ml-auto text-[9px] uppercase tracking-wide text-[#829b90]">Soon</span>}
+            const disabled = Boolean((item as { disabled?: boolean }).disabled);
+            const active = location === item.path && !disabled;
+            return <button key={`${group.group}-${item.label}`} disabled={disabled} onClick={() => { if (!disabled) { setLocation(item.path); setMenuOpen(false); } }} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${disabled ? "cursor-not-allowed text-[#6f877c]" : active ? "bg-[#25463d] text-white" : "text-[#c9d7d0] hover:bg-[#1d3831] hover:text-white"}`}>
+              <Icon className="h-4 w-4" /> <span>{item.label}</span>{disabled && <span className="ml-auto text-[9px] uppercase tracking-wide text-[#829b90]">Soon</span>}
             </button>;
           })}</div>)}
         </nav>
