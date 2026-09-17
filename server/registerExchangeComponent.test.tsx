@@ -13,7 +13,7 @@ vi.mock("@/lib/trpc", () => {
   return { trpc: {
     inventory: { list: { useQuery: () => query([]) } }, locations: { registers: { useQuery: () => query([]) } },
     cashSessions: { list: { useQuery: () => query([]) }, open: { useMutation: mutation } },
-    loyalty: { lookup: { useQuery: () => query(null) } }, settings: { posDisplay: { get: { useQuery: () => query("retail") } } }, checkout: { quote: { useMutation: mutation }, complete: { useMutation: mutation }, receipt: { useQuery: () => query(null) } },
+    loyalty: { lookup: { useQuery: () => query(null) }, list: { useQuery: () => query([]) }, registerMember: { useMutation: mutation } }, settings: { posDisplay: { get: { useQuery: () => query("retail") } } }, checkout: { quote: { useMutation: mutation }, complete: { useMutation: mutation }, receipt: { useQuery: () => query(null) } },
   } };
 });
 
