@@ -107,6 +107,7 @@ import { adminStaffProcedure, managerProcedure, memberProcedure, staffProcedure 
 import { staffMenuKeys, staffRoles } from "../drizzle/schema";
 import { defaultJobTitleForRole, roleForJobTitle } from "../shared/retailAccess";
 import { assertLoginAllowed, clearLoginFailures, registerLoginFailure, sanitizeAuditMetadata } from "./securityControls";
+import { generateDashboardForecast } from "./dashboardForecast";
 
 const credentialsSchema = z.object({
   identifier: z.string().trim().min(3).max(320),
@@ -216,6 +217,29 @@ export const appRouter = router({
       .query(async ({ ctx, input }) => {
         await requireLocationAccess(ctx, input.locationId);
         return getLocationDashboardReport(input.locationId);
+      }),
+    aiForecast: managerProcedure.input(z.object({ locationId: z.number().int().positive() }))
+      .query(async ({ ctx, input }) => {
+        await requireLocationAccess(ctx, input.locationId);
+        const [location, dashboard, cash, loyalty, lowStock] = await Promise.all([
+          listAllLocations().then(rows => rows.find(row => row.id === input.locationId)),
+          getLocationDashboardReport(input.locationId),
+          getCashSessionReport(input.locationId),
+          getLoyaltyLocationReport(input.locationId),
+          listLowStockForLocation(input.locationId),
+        ]);
+        return generateDashboardForecast({
+          locationCode: location?.code ?? `LOC-${input.locationId}`,
+          locationName: location?.name ?? "Active branch",
+          revenue: dashboard.revenue,
+          transactionCount: dashboard.transactionCount,
+          topProducts: dashboard.topProducts.slice(0, 5),
+          openCashSessions: cash.openCount,
+          totalVariance: cash.totalVariance,
+          lowStockCount: lowStock.length,
+          activeMembers: loyalty.activeMembers,
+          parkedOrders: 0,
+        });
       }),
     locationComparison: managerProcedure.query(async ({ ctx }) => {
       const locations = ctx.staff.role === "admin" ? await listAllLocations() : await listLocationsForUser(ctx.staff.userId);

@@ -29,23 +29,18 @@ describe("StaffShell protected navigation", () => {
 
   it("shows Reports to a manager with assigned Reports access and routes to the workspace", () => {
     render(<StaffShell><div>Protected workspace</div></StaffShell>);
-    fireEvent.click(screen.getByRole("button", { name: "Expand all menu groups" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reports submenu" }));
     expect(screen.getByRole("button", { name: "Reports" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Staff & access" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Reports" }));
     expect(mocks.setLocation).toHaveBeenCalledWith("/reports");
   });
 
-  it("starts authenticated navigation groups collapsed and toggles all groups", () => {
+  it("starts authenticated navigation groups collapsed without a global toggle", () => {
     render(<StaffShell><div>Protected workspace</div></StaffShell>);
-    expect(screen.getByRole("button", { name: "Expand all menu groups" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Expand all menu groups" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Reports" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Expand all menu groups" }));
-    expect(screen.getByRole("button", { name: "Collapse all menu groups" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Reports" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Inventory submenu" })).toBeVisible();
-    expect(window.localStorage.getItem("posq.sidebar.expanded.5")).toBe("true");
-    fireEvent.click(screen.getByRole("button", { name: "Collapse all menu groups" }));
-    expect(window.localStorage.getItem("posq.sidebar.expanded.5")).toBe("false");
+    fireEvent.click(screen.getByRole("button", { name: "Workspace submenu" }));
+    expect(screen.getByRole("button", { name: "Dashboard" })).toBeVisible();
   });
 });
