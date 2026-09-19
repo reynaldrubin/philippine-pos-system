@@ -87,7 +87,7 @@ export default function StaffShell({ children }: StaffShellProps) {
           <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#bceee3] text-[#145b58] shadow-lg"><Store className="h-5 w-5" /></span>
           <span><span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-[#b9c8c0]">Philippine retail OS</span><span className="text-lg font-semibold tracking-tight">PosQ</span></span>
         </button>
-        <nav className="space-y-1">
+        <nav className="posq-sidebar-scroll min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
           {visibleNavigation.map(group => <div key={group.group} className="mb-3"><button type="button" aria-label={`${group.group} submenu`} onClick={() => setExpandedGroups(current => ({ ...current, [group.group]: !current[group.group] }))} className="mb-1 flex w-full items-center justify-between px-3 py-2 text-left text-[10px] font-bold uppercase tracking-[0.16em] text-[#829b90] hover:text-white"><span aria-hidden="true">{group.group}</span><ChevronRight className={`h-3.5 w-3.5 transition-transform ${expandedGroups[group.group] ? "rotate-90" : ""}`} /></button>{expandedGroups[group.group] && group.items.map(item => {
             const Icon = item.icon;
             const disabled = Boolean((item as { disabled?: boolean }).disabled);

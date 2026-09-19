@@ -104,6 +104,11 @@
   .input { @apply h-10 rounded-xl border border-[#cfe1db] bg-white px-3 text-sm text-[#173f3d] outline-none transition placeholder:text-[#8aa19a] focus:border-[#58b9aa] focus:ring-4 focus:ring-[#bceee3]/60; }
   .button { @apply inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#147d78] px-4 text-sm font-semibold text-white transition hover:bg-[#0f6864] active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-60; }
   .posq-card { @apply rounded-3xl border border-[#d9e9e4] bg-white shadow-[0_18px_45px_-32px_rgba(16,76,70,.35)]; }
+  .posq-sidebar-scroll { scrollbar-width: thin; scrollbar-color: rgba(188, 238, 227, .55) transparent; overscroll-behavior: contain; }
+  .posq-sidebar-scroll::-webkit-scrollbar { width: 8px; }
+  .posq-sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+  .posq-sidebar-scroll::-webkit-scrollbar-thumb { border-radius: 999px; background: rgba(188, 238, 227, .55); border: 2px solid transparent; background-clip: padding-box; }
+  .posq-sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(217, 249, 157, .8); background-clip: padding-box; }
   @media (min-width: 640px) { .container { padding-inline: 1.5rem; } }
   @media (min-width: 1024px) { .container { max-width: 1280px; padding-inline: 2rem; } }
 }

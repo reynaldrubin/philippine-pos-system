@@ -1,7 +1,7 @@
 import { formatPHP } from "@/lib/currency";
 import { usePosStore } from "@/stores/posStore";
 import { trpc } from "@/lib/trpc";
-import { CheckCircle2, CreditCard, Eye, EyeOff, Minus, Plus, Search, Trash2, UserRoundPlus, UserPlus, X, PauseCircle, PlayCircle, ScanLine, Camera, QrCode, Tablet } from "lucide-react";
+import { CheckCircle2, CreditCard, Eye, EyeOff, Minus, Plus, Search, Trash2, UserPlus, X, PauseCircle, PlayCircle, ScanLine, Camera, QrCode, Tablet } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { parseExchangeHandoff } from "../../../shared/exchangeHandoff";
 
@@ -133,7 +133,7 @@ function RegisterMemberTools({ memberRef, memberTerm, setMemberTerm, setMemberLo
           <input ref={memberRef} value={memberTerm} onChange={(event) => { setMemberTerm(event.target.value); setMemberLookupMessage(""); }} className="h-10 min-w-0 flex-1 rounded-xl border border-[#d6ded7] px-3 text-sm" placeholder="Member name, mobile, number, or QR" />
           <button type="button" onClick={() => setScanTarget("member")} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#d6ded7] text-[#245b57]" aria-label="Scan loyalty QR or barcode"><QrCode className="h-4 w-4" /></button>
           <button type="button" onClick={() => { setShowMemberRegistration((value: boolean) => !value); setMemberLookupMessage(""); }} className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl bg-[#d9f99d] px-3 text-xs font-semibold text-[#17352e]"><UserPlus className="h-4 w-4" /> Register new member</button>
-          <button type="submit" className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#17352e] text-white" aria-label="Search loyalty member"><UserRoundPlus className="h-4 w-4" /></button>
+          <button type="submit" className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#17352e] text-white" aria-label="Search loyalty member"><Search className="h-4 w-4" /></button>
         </form>
         {memberSuggestions.length > 0 && <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-xl border border-[#d6ded7] bg-white shadow-xl">
           {memberSuggestions.slice(0, 6).map((member: any) => <button type="button" key={member.id} onClick={() => { setSelectedMember({ id: member.id, memberNumber: member.memberNumber, name: `${member.firstName} ${member.lastName}`, currentPoints: member.currentPoints ?? 0 }); setMemberTerm(""); setMemberLookupMessage(""); }} className="flex w-full items-center justify-between border-b border-[#eef1ee] px-3 py-2 text-left text-xs last:border-0 hover:bg-[#f2faf4]"><span><strong className="block text-[#294137]">{member.firstName} {member.lastName}</strong><span className="text-[#718078]">{member.memberNumber} · {member.mobile}</span></span><span className="text-[#39766f]">{member.currentPoints ?? 0} pts</span></button>)}
