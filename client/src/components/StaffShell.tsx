@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import {
   ArrowLeftRight, BadgePercent, BarChart3, ChevronDown, ChevronRight, ClipboardCheck, LayoutDashboard, LogOut, Menu, Package, ReceiptText, Settings2, ShoppingCart, Store, Undo2, UsersRound, UserCog, WalletCards,
 } from "lucide-react";
-import React, { ReactNode, useEffect, useState } from "react";
+import React, { ReactNode, useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 
 type StaffShellProps = { children: ReactNode };
@@ -43,9 +43,14 @@ const navigation = [
 export default function StaffShell({ children }: StaffShellProps) {
   const [location, setLocation] = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ Workspace: true, Inventory: true, Operations: true, Financials: true, Reports: true, Configuration: true });
+  const allGroupsExpanded = useMemo(() => Object.fromEntries(navigation.map(group => [group.group, true])) as Record<string, boolean>, []);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(allGroupsExpanded);
   const { accessToken, user, locations, menuKeys, activeLocationId, setActiveLocation, setSession, clearSession } = usePosStore();
   const profile = trpc.staffAuth.me.useQuery(undefined, { enabled: Boolean(accessToken), retry: false });
+
+  useEffect(() => {
+    if (accessToken) setExpandedGroups(allGroupsExpanded);
+  }, [accessToken, allGroupsExpanded]);
 
   useEffect(() => {
     if (profile.data && accessToken && (["cashier", "manager", "admin"] as string[]).includes(profile.data.user.role)) {

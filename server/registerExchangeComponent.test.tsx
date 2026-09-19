@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -29,5 +29,13 @@ describe("linked replacement sale", () => {
     expect(screen.getByText(/refund already issued ₱100\.00/i)).toBeInTheDocument();
     expect(screen.getByText("Net after recorded refund")).toBeInTheDocument();
     expect(screen.getByText("₱50.00")).toBeInTheDocument();
+  });
+
+  it("toggles the catalog visibility and tablet layout controls", () => {
+    render(<Register />);
+    fireEvent.click(screen.getByRole("button", { name: "Hide all products" }));
+    expect(screen.getByRole("button", { name: "Show all products" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Tablet/ }));
+    expect(screen.getByRole("button", { name: /Tablet/ })).toHaveAttribute("aria-pressed", "true");
   });
 });

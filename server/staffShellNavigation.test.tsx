@@ -34,4 +34,10 @@ describe("StaffShell protected navigation", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reports" }));
     expect(mocks.setLocation).toHaveBeenCalledWith("/reports");
   });
+
+  it("starts authenticated navigation groups expanded", () => {
+    render(<StaffShell><div>Protected workspace</div></StaffShell>);
+    expect(screen.getByRole("button", { name: "Reports" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Inventory submenu" })).toBeVisible();
+  });
 });
