@@ -37,6 +37,11 @@ import {
   getLoyaltyMemberDetail,
   getCashSessionReport,
   getLoyaltyLocationReport,
+  getLocationHistoricalReport,
+  listReportTemplates,
+  createReportTemplate,
+  updateReportTemplate,
+  deleteReportTemplate,
   getLocationDashboardReport,
   listAuditLogs,
   lookupLoyaltyMemberForStaff,
@@ -116,6 +121,8 @@ const credentialsSchema = z.object({
 const phpAmountSchema = z.string().regex(/^\d+(\.\d{1,2})?$/, "Use a non-negative PHP amount with up to two decimal places");
 const quantitySchema = z.string().regex(/^-?\d+(\.\d{1,3})?$/, "Use a quantity with up to three decimal places");
 const paymentMethodSchema = z.enum(["cash", "gcash", "maya", "qrph", "debit_card", "credit_card", "bank_transfer"]);
+const reportDateRangeSchema = z.object({ startDate: z.coerce.date(), endDate: z.coerce.date() }).refine(value => value.startDate <= value.endDate, { message: "Start date must be on or before end date" }).refine(value => value.endDate.getTime() - value.startDate.getTime() <= 366 * 24 * 60 * 60 * 1000, { message: "Report range cannot exceed 366 days" });
+const reportTemplateSchema = z.object({ locationId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(2).max(120), metric: z.enum(["revenue", "transactions", "products"]), groupBy: z.enum(["products", "locations"]), presentation: z.enum(["bars", "table"]), startDate: z.coerce.date().nullable().optional(), endDate: z.coerce.date().nullable().optional() });
 const checkoutLinesSchema = z.array(z.object({ productId: z.number().int().positive(), quantity: z.string().regex(/^\d+(\.\d{1,3})?$/) })).min(1)
   .superRefine((lines, ctx) => {
     const ids = new Set<number>();
@@ -218,6 +225,31 @@ export const appRouter = router({
         await requireLocationAccess(ctx, input.locationId);
         return getLocationDashboardReport(input.locationId);
       }),
+    historical: managerProcedure.input(z.object({ locationId: z.number().int().positive() }).and(reportDateRangeSchema))
+      .query(async ({ ctx, input }) => {
+        await requireLocationAccess(ctx, input.locationId);
+        return getLocationHistoricalReport(input);
+      }),
+    templates: router({
+      list: managerProcedure.query(({ ctx }) => listReportTemplates(ctx.staff.userId)),
+      create: managerProcedure.input(reportTemplateSchema).mutation(async ({ ctx, input }) => {
+        if (input.locationId) await requireLocationAccess(ctx, input.locationId);
+        const templateId = await createReportTemplate({ ...input, ownerId: ctx.staff.userId });
+        await appendAuditLog({ userId: ctx.staff.userId, locationId: input.locationId, action: "report_template.created", entityType: "report_template", entityId: templateId, metadata: { name: input.name } });
+        return { templateId };
+      }),
+      update: managerProcedure.input(reportTemplateSchema.extend({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        if (input.locationId) await requireLocationAccess(ctx, input.locationId);
+        await updateReportTemplate({ ...input, ownerId: ctx.staff.userId });
+        await appendAuditLog({ userId: ctx.staff.userId, locationId: input.locationId, action: "report_template.updated", entityType: "report_template", entityId: input.id });
+        return { success: true };
+      }),
+      delete: managerProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        await deleteReportTemplate(input.id, ctx.staff.userId);
+        await appendAuditLog({ userId: ctx.staff.userId, action: "report_template.deleted", entityType: "report_template", entityId: input.id });
+        return { success: true };
+      }),
+    }),
     aiForecast: managerProcedure.input(z.object({ locationId: z.number().int().positive() }))
       .query(async ({ ctx, input }) => {
         await requireLocationAccess(ctx, input.locationId);

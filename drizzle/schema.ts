@@ -648,5 +648,23 @@ export const systemSettings = mysqlTable("systemSettings", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const reportTemplates = mysqlTable(
+  "reportTemplates",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    ownerId: int("ownerId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    locationId: int("locationId").references(() => locations.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    metric: mysqlEnum("metric", ["revenue", "transactions", "products"]).notNull(),
+    groupBy: mysqlEnum("groupBy", ["products", "locations"]).notNull(),
+    presentation: mysqlEnum("presentation", ["bars", "table"]).notNull(),
+    startDate: timestamp("startDate"),
+    endDate: timestamp("endDate"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("report_templates_owner_idx").on(table.ownerId, table.updatedAt), index("report_templates_location_idx").on(table.locationId)],
+);
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;

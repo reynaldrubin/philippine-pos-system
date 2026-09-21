@@ -23,6 +23,7 @@ import {
   purchaseOrders,
   purchaseRequestItems,
   purchaseRequests,
+  reportTemplates,
   receiptDevices,
   registers,
   saleItems,
@@ -1136,4 +1137,48 @@ export async function createLoyaltyMember(input: CreateLoyaltyMemberInput) {
 
     return { memberId, memberNumber, cardNumber, displayToken };
   });
+}
+
+
+export type HistoricalReportInput = { locationId: number; startDate: Date; endDate: Date };
+
+export async function getLocationHistoricalReport(input: HistoricalReportInput) {
+  const db = await getDb();
+  const startDate = new Date(input.startDate); startDate.setHours(0, 0, 0, 0);
+  const endDate = new Date(input.endDate); endDate.setHours(23, 59, 59, 999);
+  if (!db) return { startDate, endDate, revenue: "0.00", transactionCount: 0, trend: [], topProducts: [] };
+  const condition = and(eq(sales.locationId, input.locationId), eq(sales.status, "completed"), gte(sales.createdAt, startDate), lte(sales.createdAt, endDate));
+  const totals = await db.select({ revenue: sql<string>`coalesce(sum(${sales.totalAmount}), 0)`, transactionCount: sql<number>`count(*)` }).from(sales).where(condition);
+  const trend = await db.select({ bucket: sql<string>`date(${sales.createdAt})`, revenue: sql<string>`coalesce(sum(${sales.totalAmount}), 0)`, transactionCount: sql<number>`count(*)` })
+    .from(sales).where(condition).groupBy(sql`date(${sales.createdAt})`).orderBy(sql`date(${sales.createdAt})`);
+  const topProducts = await db.select({ name: saleItems.nameSnapshot, sku: saleItems.skuSnapshot, quantity: sql<string>`coalesce(sum(${saleItems.quantity}), 0)`, revenue: sql<string>`coalesce(sum(${saleItems.lineTotal}), 0)` })
+    .from(saleItems).innerJoin(sales, eq(saleItems.saleId, sales.id)).where(condition).groupBy(saleItems.productId, saleItems.nameSnapshot, saleItems.skuSnapshot)
+    .orderBy(sql`sum(${saleItems.lineTotal}) desc`).limit(10);
+  return { startDate, endDate, revenue: String(totals[0]?.revenue ?? "0.00"), transactionCount: Number(totals[0]?.transactionCount ?? 0), trend: trend.map(item => ({ bucket: item.bucket, revenue: String(item.revenue ?? "0.00"), transactionCount: Number(item.transactionCount ?? 0) })), topProducts };
+}
+
+export async function listReportTemplates(ownerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(reportTemplates).where(eq(reportTemplates.ownerId, ownerId)).orderBy(desc(reportTemplates.updatedAt));
+}
+
+export async function createReportTemplate(input: { ownerId: number; locationId?: number | null; name: string; metric: "revenue" | "transactions" | "products"; groupBy: "products" | "locations"; presentation: "bars" | "table"; startDate?: Date | null; endDate?: Date | null }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const [result] = await db.insert(reportTemplates).values({ ...input, locationId: input.locationId ?? null, startDate: input.startDate ?? null, endDate: input.endDate ?? null });
+  return Number(result.insertId);
+}
+
+export async function updateReportTemplate(input: { id: number; ownerId: number; locationId?: number | null; name?: string; metric?: "revenue" | "transactions" | "products"; groupBy?: "products" | "locations"; presentation?: "bars" | "table"; startDate?: Date | null; endDate?: Date | null }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const { id, ownerId, ...changes } = input;
+  await db.update(reportTemplates).set({ ...changes, locationId: changes.locationId ?? null, startDate: changes.startDate ?? null, endDate: changes.endDate ?? null }).where(and(eq(reportTemplates.id, id), eq(reportTemplates.ownerId, ownerId)));
+}
+
+export async function deleteReportTemplate(id: number, ownerId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  await db.delete(reportTemplates).where(and(eq(reportTemplates.id, id), eq(reportTemplates.ownerId, ownerId)));
 }
