@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -65,7 +65,9 @@ describe("protected management workspaces", () => {
     render(<Operations />);
     expect(screen.getByRole("heading", { name: "Operations" })).toBeInTheDocument();
     expect(screen.getByText("Cash sessions")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Cash movements/ }));
     expect(screen.getByText("Cash drawer movements")).toBeInTheDocument();
-    expect(screen.getByText("Staff attendance")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Staff attendance/ }));
+    expect(screen.getByRole("heading", { name: "Staff attendance" })).toBeInTheDocument();
   });
 });

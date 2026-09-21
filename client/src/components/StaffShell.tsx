@@ -31,6 +31,8 @@ const navigation = [
   ]},
   { group: "Reports", items: [
     { path: "/reports", key: "reports", label: "Reports", icon: BarChart3, roles: ["manager", "admin"] },
+    { path: "/insights", key: "reports", label: "Insights", icon: BarChart3, roles: ["manager", "admin"] },
+    { path: "/report-builder", key: "reports", label: "Report builder", icon: ReceiptText, roles: ["manager", "admin"] },
   ]},
   { group: "Configuration", items: [
     { path: "/users", key: "users", label: "Staff creation", icon: UserCog, roles: ["admin"] },
