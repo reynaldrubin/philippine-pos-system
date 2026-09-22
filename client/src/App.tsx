@@ -27,6 +27,7 @@ const CashControls = lazy(() => import("./pages/CashControls"));
 const CashClose = lazy(() => import("./pages/CashClose"));
 const Returns = lazy(() => import("./pages/Returns"));
 const StoreSettings = lazy(() => import("./pages/StoreSettings"));
+const HRIS = lazy(() => import("./pages/HRIS"));
 
 function Protected({ children }: { children: React.ReactNode }) {
   const accessToken = usePosStore(state => state.accessToken);
@@ -61,6 +62,7 @@ function Router() {
       <Route path={"/cash-close"}><Protected><CashClose /></Protected></Route>
       <Route path={"/returns"}><Protected><Returns /></Protected></Route>
       <Route path={"/store-settings"}><Protected><StoreSettings /></Protected></Route>
+      <Route path={"/hris"}><Protected><HRIS /></Protected></Route>
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

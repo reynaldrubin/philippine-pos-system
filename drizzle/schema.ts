@@ -14,7 +14,7 @@ import {
 
 export const staffRoles = ["cashier", "manager", "admin"] as const;
 const persistedUserRoles = ["user", ...staffRoles] as const;
-export const staffMenuKeys = ["overview", "register", "inventory", "transfers", "members", "operations", "reports", "users", "compliance"] as const;
+export const staffMenuKeys = ["overview", "register", "inventory", "transfers", "members", "operations", "reports", "users", "compliance", "hris"] as const;
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -30,6 +30,26 @@ export const users = mysqlTable("users", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
+
+export const employeeProfiles = mysqlTable("employeeProfiles", {
+  id: int("id").autoincrement().primaryKey(), userId: int("userId").references(() => users.id, { onDelete: "set null" }), employeeNumber: varchar("employeeNumber", { length: 40 }).notNull().unique(), firstName: varchar("firstName", { length: 80 }).notNull(), middleName: varchar("middleName", { length: 80 }), lastName: varchar("lastName", { length: 80 }).notNull(), birthDate: timestamp("birthDate"), sex: mysqlEnum("sex", ["female", "male", "prefer_not_to_say"]), civilStatus: mysqlEnum("civilStatus", ["single", "married", "widowed", "separated"]), mobile: varchar("mobile", { length: 40 }), personalEmail: varchar("personalEmail", { length: 240 }), address: text("address"), hireDate: timestamp("hireDate"), employmentStatus: mysqlEnum("employmentStatus", ["active", "probationary", "on_leave", "inactive", "separated"]).default("active").notNull(), department: varchar("department", { length: 120 }), position: varchar("position", { length: 120 }), managerId: int("managerId"), tin: varchar("tin", { length: 40 }), sssNumber: varchar("sssNumber", { length: 40 }), philhealthNumber: varchar("philhealthNumber", { length: 40 }), pagibigNumber: varchar("pagibigNumber", { length: 40 }), emergencyContactName: varchar("emergencyContactName", { length: 160 }), emergencyContactPhone: varchar("emergencyContactPhone", { length: 40 }), createdAt: timestamp("createdAt").defaultNow().notNull(), updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [index("employee_profiles_status_idx").on(table.employmentStatus), index("employee_profiles_user_idx").on(table.userId)]);
+
+export const employeeCompensation = mysqlTable("employeeCompensation", {
+  id: int("id").autoincrement().primaryKey(), employeeId: int("employeeId").notNull().references(() => employeeProfiles.id, { onDelete: "cascade" }), effectiveDate: timestamp("effectiveDate").notNull(), salaryType: mysqlEnum("salaryType", ["monthly", "daily", "hourly"]).notNull(), baseSalary: decimal("baseSalary", { precision: 14, scale: 2 }).notNull(), allowances: json("allowances"), payFrequency: mysqlEnum("payFrequency", ["monthly", "semi_monthly", "weekly"]).default("semi_monthly").notNull(), notes: text("notes"), createdById: int("createdById").notNull().references(() => users.id, { onDelete: "restrict" }), createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [index("employee_compensation_employee_idx").on(table.employeeId, table.effectiveDate)]);
+
+export const employeeCertificates = mysqlTable("employeeCertificates", {
+  id: int("id").autoincrement().primaryKey(), employeeId: int("employeeId").notNull().references(() => employeeProfiles.id, { onDelete: "cascade" }), certificateType: varchar("certificateType", { length: 120 }).notNull(), certificateNumber: varchar("certificateNumber", { length: 120 }), issuedDate: timestamp("issuedDate"), expiryDate: timestamp("expiryDate"), issuer: varchar("issuer", { length: 160 }), status: mysqlEnum("status", ["valid", "expiring", "expired", "pending"]).default("valid").notNull(), notes: text("notes"), createdById: int("createdById").notNull().references(() => users.id, { onDelete: "restrict" }), createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [index("employee_certificates_employee_idx").on(table.employeeId, table.expiryDate)]);
+
+export const employeeLeaveRequests = mysqlTable("employeeLeaveRequests", {
+  id: int("id").autoincrement().primaryKey(), employeeId: int("employeeId").notNull().references(() => employeeProfiles.id, { onDelete: "cascade" }), leaveType: mysqlEnum("leaveType", ["vacation", "sick", "emergency", "service_incentive", "other"]).notNull(), startDate: timestamp("startDate").notNull(), endDate: timestamp("endDate").notNull(), reason: text("reason"), status: mysqlEnum("status", ["pending", "approved", "rejected", "cancelled"]).default("pending").notNull(), reviewedById: int("reviewedById").references(() => users.id, { onDelete: "set null" }), reviewedAt: timestamp("reviewedAt"), createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [index("employee_leave_employee_idx").on(table.employeeId, table.startDate)]);
+
+export const philippineHolidays = mysqlTable("philippineHolidays", {
+  id: int("id").autoincrement().primaryKey(), holidayDate: timestamp("holidayDate").notNull(), name: varchar("name", { length: 160 }).notNull(), holidayType: mysqlEnum("holidayType", ["regular", "special_non_working", "special_working"]).notNull(), year: int("year").notNull(), notes: text("notes"), createdById: int("createdById").notNull().references(() => users.id, { onDelete: "restrict" }), createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [index("philippine_holidays_year_idx").on(table.year, table.holidayDate)]);
 
 export const authRateLimits = mysqlTable(
   "authRateLimits",

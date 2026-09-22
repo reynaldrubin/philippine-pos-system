@@ -2,7 +2,7 @@ import { formatRole } from "@/lib/currency";
 import { StaffMenuKey, StaffRole, usePosStore } from "@/stores/posStore";
 import { trpc } from "@/lib/trpc";
 import {
-  ArrowLeftRight, BadgePercent, BarChart3, ChevronDown, ChevronRight, ClipboardCheck, LayoutDashboard, LogOut, Menu, Package, ReceiptText, Settings2, ShoppingCart, Store, Undo2, UsersRound, UserCog, WalletCards,
+  ArrowLeftRight, Award, BadgePercent, BarChart3, CalendarDays, ChevronDown, ChevronRight, ClipboardCheck, FileText, IdCard, LayoutDashboard, LogOut, Menu, Package, ReceiptText, Settings2, ShoppingCart, Store, Undo2, UserRound, UsersRound, UserCog, WalletCards,
 } from "lucide-react";
 import React, { ReactNode, useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
@@ -39,6 +39,14 @@ const navigation = [
     { path: "/users", key: "users", label: "Access management", icon: UsersRound, roles: ["admin"] },
     { path: "/compliance", key: "compliance", label: "Fiscal & audit", icon: ClipboardCheck, roles: ["admin"] },
     { path: "/store-settings", key: "users", label: "POS display settings", icon: Store, roles: ["admin"] },
+  ]},
+  { group: "HRIS", items: [
+    { path: "/hris?section=masterlist", key: "hris", label: "Employee Masterlist", icon: UsersRound, roles: ["manager", "admin"] },
+    { path: "/hris?section=salary", key: "hris", label: "Employee Salary & Benefits", icon: WalletCards, roles: ["manager", "admin"] },
+    { path: "/hris?section=self-service", key: "hris", label: "Employee Self-Service", icon: FileText, roles: ["manager", "admin"] },
+    { path: "/hris?section=profile", key: "hris", label: "Profile & Preferences", icon: UserRound, roles: ["manager", "admin"] },
+    { path: "/hris?section=certificates", key: "hris", label: "Employee Certificates", icon: Award, roles: ["manager", "admin"] },
+    { path: "/hris?section=holidays", key: "hris", label: "Philippine Holidays", icon: CalendarDays, roles: ["manager", "admin"] },
   ]},
 ];
 

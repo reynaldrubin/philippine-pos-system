@@ -38,6 +38,18 @@ import {
   getCashSessionReport,
   getLoyaltyLocationReport,
   getLocationHistoricalReport,
+  listEmployeeProfiles,
+  getEmployeeProfileByUserId,
+  createEmployeeProfile,
+  listEmployeeCompensation,
+  createEmployeeCompensation,
+  listEmployeeCertificates,
+  createEmployeeCertificate,
+  listEmployeeLeaveRequests,
+  createEmployeeLeaveRequest,
+  updateEmployeeLeaveStatus,
+  listPhilippineHolidays,
+  createPhilippineHoliday,
   listReportTemplates,
   createReportTemplate,
   updateReportTemplate,
@@ -314,6 +326,33 @@ export const appRouter = router({
         await appendAuditLog({ userId: ctx.staff.userId, locationId: input.locationId, action: `attendance.${input.eventType}`, entityType: "staff_attendance", entityId: attendanceId, metadata: { subjectUserId: userId } });
         return { attendanceId };
       }),
+    }),
+  }),
+  hris: router({
+    employees: managerProcedure.input(z.object({ search: z.string().trim().max(120).optional() })).query(({ input }) => listEmployeeProfiles(input.search)),
+    createEmployee: managerProcedure.input(z.object({ employeeNumber: z.string().trim().min(2).max(40), firstName: z.string().trim().min(1).max(80), middleName: z.string().trim().max(80).optional(), lastName: z.string().trim().min(1).max(80), birthDate: z.coerce.date().optional(), sex: z.enum(["female", "male", "prefer_not_to_say"]).optional(), civilStatus: z.enum(["single", "married", "widowed", "separated"]).optional(), mobile: z.string().trim().max(40).optional(), personalEmail: z.string().email().optional(), address: z.string().max(1000).optional(), hireDate: z.coerce.date().optional(), employmentStatus: z.enum(["active", "probationary", "on_leave", "inactive", "separated"]).optional(), department: z.string().trim().max(120).optional(), position: z.string().trim().max(120).optional(), managerId: z.number().int().positive().optional(), tin: z.string().trim().max(40).optional(), sssNumber: z.string().trim().max(40).optional(), philhealthNumber: z.string().trim().max(40).optional(), pagibigNumber: z.string().trim().max(40).optional(), emergencyContactName: z.string().trim().max(160).optional(), emergencyContactPhone: z.string().trim().max(40).optional(), userId: z.number().int().positive().optional() })).mutation(async ({ ctx, input }) => { const employeeId = await createEmployeeProfile(input); await appendAuditLog({ userId: ctx.staff.userId, action: "hris.employee.created", entityType: "employee_profile", entityId: employeeId }); return { employeeId }; }),
+    compensation: router({
+      list: managerProcedure.input(z.object({ employeeId: z.number().int().positive() })).query(({ input }) => listEmployeeCompensation(input.employeeId)),
+      create: adminStaffProcedure.input(z.object({ employeeId: z.number().int().positive(), effectiveDate: z.coerce.date(), salaryType: z.enum(["monthly", "daily", "hourly"]), baseSalary: phpAmountSchema.refine(value => Number(value) > 0), allowances: z.record(z.string(), z.number()).optional(), payFrequency: z.enum(["monthly", "semi_monthly", "weekly"]), notes: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => { const compensationId = await createEmployeeCompensation({ ...input, createdById: ctx.staff.userId }); await appendAuditLog({ userId: ctx.staff.userId, action: "hris.compensation.created", entityType: "employee_compensation", entityId: compensationId }); return { compensationId }; }),
+    }),
+    certificates: router({
+      list: managerProcedure.input(z.object({ employeeId: z.number().int().positive() })).query(({ input }) => listEmployeeCertificates(input.employeeId)),
+      create: managerProcedure.input(z.object({ employeeId: z.number().int().positive(), certificateType: z.string().trim().min(2).max(120), certificateNumber: z.string().trim().max(120).optional(), issuedDate: z.coerce.date().optional(), expiryDate: z.coerce.date().optional(), issuer: z.string().trim().max(160).optional(), status: z.enum(["valid", "expiring", "expired", "pending"]).optional(), notes: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => { const certificateId = await createEmployeeCertificate({ ...input, createdById: ctx.staff.userId }); await appendAuditLog({ userId: ctx.staff.userId, action: "hris.certificate.created", entityType: "employee_certificate", entityId: certificateId }); return { certificateId }; }),
+    }),
+    selfService: router({
+      profile: staffProcedure.query(({ ctx }) => getEmployeeProfileByUserId(ctx.staff.userId)),
+      leave: router({
+        list: staffProcedure.query(async ({ ctx }) => { const employee = await getEmployeeProfileByUserId(ctx.staff.userId); return employee ? listEmployeeLeaveRequests(employee.id) : []; }),
+        request: staffProcedure.input(z.object({ leaveType: z.enum(["vacation", "sick", "emergency", "service_incentive", "other"]), startDate: z.coerce.date(), endDate: z.coerce.date(), reason: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => { const employee = await getEmployeeProfileByUserId(ctx.staff.userId); if (!employee) throw new TRPCError({ code: "NOT_FOUND", message: "Employee profile is not linked to this staff account" }); const requestId = await createEmployeeLeaveRequest({ ...input, employeeId: employee.id }); await appendAuditLog({ userId: ctx.staff.userId, action: "hris.leave.requested", entityType: "employee_leave_request", entityId: requestId }); return { requestId }; }),
+      }),
+    }),
+    leave: router({
+      list: managerProcedure.input(z.object({ employeeId: z.number().int().positive().optional() })).query(({ input }) => listEmployeeLeaveRequests(input.employeeId)),
+      updateStatus: managerProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["approved", "rejected", "cancelled"]) })).mutation(async ({ ctx, input }) => { await updateEmployeeLeaveStatus({ ...input, reviewedById: ctx.staff.userId }); await appendAuditLog({ userId: ctx.staff.userId, action: `hris.leave.${input.status}`, entityType: "employee_leave_request", entityId: input.id }); return { success: true }; }),
+    }),
+    holidays: router({
+      list: staffProcedure.input(z.object({ year: z.number().int().min(2000).max(2100) })).query(({ input }) => listPhilippineHolidays(input.year)),
+      create: managerProcedure.input(z.object({ holidayDate: z.coerce.date(), name: z.string().trim().min(2).max(160), holidayType: z.enum(["regular", "special_non_working", "special_working"]), year: z.number().int().min(2000).max(2100), notes: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => { const holidayId = await createPhilippineHoliday({ ...input, createdById: ctx.staff.userId }); await appendAuditLog({ userId: ctx.staff.userId, action: "hris.holiday.created", entityType: "philippine_holiday", entityId: holidayId }); return { holidayId }; }),
     }),
   }),
   auth: router({

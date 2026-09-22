@@ -10,12 +10,17 @@ import {
   cashSafeDrops,
   categories,
   cashSessions,
+  employeeCertificates,
+  employeeCompensation,
+  employeeLeaveRequests,
+  employeeProfiles,
   locationInventory,
   loyaltyAccounts,
   loyaltyCards,
   loyaltyMembers,
   loyaltyTransactions,
   locations,
+  philippineHolidays,
   fiscalDocuments,
   invoiceSeries,
   products,
@@ -1181,4 +1186,85 @@ export async function deleteReportTemplate(id: number, ownerId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database is unavailable");
   await db.delete(reportTemplates).where(and(eq(reportTemplates.id, id), eq(reportTemplates.ownerId, ownerId)));
+}
+
+
+export async function listEmployeeProfiles(search?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const term = search?.trim();
+  return db.select().from(employeeProfiles).where(term ? or(like(employeeProfiles.employeeNumber, `%${term}%`), like(employeeProfiles.firstName, `%${term}%`), like(employeeProfiles.lastName, `%${term}%`), like(employeeProfiles.department, `%${term}%`)) : undefined).orderBy(employeeProfiles.lastName, employeeProfiles.firstName);
+}
+
+export async function createEmployeeProfile(input: { employeeNumber: string; firstName: string; middleName?: string; lastName: string; birthDate?: Date; sex?: "female" | "male" | "prefer_not_to_say"; civilStatus?: "single" | "married" | "widowed" | "separated"; mobile?: string; personalEmail?: string; address?: string; hireDate?: Date; employmentStatus?: "active" | "probationary" | "on_leave" | "inactive" | "separated"; department?: string; position?: string; managerId?: number; tin?: string; sssNumber?: string; philhealthNumber?: string; pagibigNumber?: string; emergencyContactName?: string; emergencyContactPhone?: string; userId?: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const [result] = await db.insert(employeeProfiles).values({ ...input, middleName: input.middleName || null, birthDate: input.birthDate || null, sex: input.sex || null, civilStatus: input.civilStatus || null, mobile: input.mobile || null, personalEmail: input.personalEmail || null, address: input.address || null, hireDate: input.hireDate || null, employmentStatus: input.employmentStatus ?? "active", department: input.department || null, position: input.position || null, managerId: input.managerId || null, tin: input.tin || null, sssNumber: input.sssNumber || null, philhealthNumber: input.philhealthNumber || null, pagibigNumber: input.pagibigNumber || null, emergencyContactName: input.emergencyContactName || null, emergencyContactPhone: input.emergencyContactPhone || null, userId: input.userId || null });
+  return Number(result.insertId);
+}
+
+export async function listEmployeeCompensation(employeeId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(employeeCompensation).where(eq(employeeCompensation.employeeId, employeeId)).orderBy(desc(employeeCompensation.effectiveDate));
+}
+
+export async function createEmployeeCompensation(input: { employeeId: number; effectiveDate: Date; salaryType: "monthly" | "daily" | "hourly"; baseSalary: string; allowances?: unknown; payFrequency: "monthly" | "semi_monthly" | "weekly"; notes?: string; createdById: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const [result] = await db.insert(employeeCompensation).values({ ...input, allowances: input.allowances ?? null, notes: input.notes || null });
+  return Number(result.insertId);
+}
+
+export async function listEmployeeCertificates(employeeId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(employeeCertificates).where(eq(employeeCertificates.employeeId, employeeId)).orderBy(desc(employeeCertificates.expiryDate));
+}
+
+export async function createEmployeeCertificate(input: { employeeId: number; certificateType: string; certificateNumber?: string; issuedDate?: Date; expiryDate?: Date; issuer?: string; status?: "valid" | "expiring" | "expired" | "pending"; notes?: string; createdById: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const [result] = await db.insert(employeeCertificates).values({ ...input, certificateNumber: input.certificateNumber || null, issuedDate: input.issuedDate || null, expiryDate: input.expiryDate || null, issuer: input.issuer || null, status: input.status ?? "valid", notes: input.notes || null });
+  return Number(result.insertId);
+}
+
+export async function listEmployeeLeaveRequests(employeeId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(employeeLeaveRequests).where(employeeId ? eq(employeeLeaveRequests.employeeId, employeeId) : undefined).orderBy(desc(employeeLeaveRequests.createdAt));
+}
+
+export async function createEmployeeLeaveRequest(input: { employeeId: number; leaveType: "vacation" | "sick" | "emergency" | "service_incentive" | "other"; startDate: Date; endDate: Date; reason?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const [result] = await db.insert(employeeLeaveRequests).values({ ...input, reason: input.reason || null });
+  return Number(result.insertId);
+}
+
+export async function updateEmployeeLeaveStatus(input: { id: number; status: "approved" | "rejected" | "cancelled"; reviewedById: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  await db.update(employeeLeaveRequests).set({ status: input.status, reviewedById: input.reviewedById, reviewedAt: new Date() }).where(eq(employeeLeaveRequests.id, input.id));
+}
+
+export async function listPhilippineHolidays(year: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(philippineHolidays).where(eq(philippineHolidays.year, year)).orderBy(philippineHolidays.holidayDate);
+}
+
+export async function createPhilippineHoliday(input: { holidayDate: Date; name: string; holidayType: "regular" | "special_non_working" | "special_working"; year: number; notes?: string; createdById: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const [result] = await db.insert(philippineHolidays).values({ ...input, notes: input.notes || null });
+  return Number(result.insertId);
+}
+
+
+export async function getEmployeeProfileByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(employeeProfiles).where(eq(employeeProfiles.userId, userId)).limit(1);
+  return result[0];
 }

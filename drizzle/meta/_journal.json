@@ -85,6 +85,13 @@
       "when": 1790006122658,
       "tag": "0011_tan_white_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1790088253136,
+      "tag": "0012_lovely_blizzard",
+      "breakpoints": true
     }
   ]
 }
