@@ -38,6 +38,8 @@ import {
   stockTransferItems,
   stockTransfers,
   staffAttendance,
+  timekeepingSchedules,
+  timekeepingScheduleRequests,
   staffMenuAssignments,
   taxRegistrations,
   userLocations,
@@ -1267,4 +1269,26 @@ export async function getEmployeeProfileByUserId(userId: number) {
   if (!db) return undefined;
   const result = await db.select().from(employeeProfiles).where(eq(employeeProfiles.userId, userId)).limit(1);
   return result[0];
+}
+
+
+export async function listTimekeepingSchedules() {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(timekeepingSchedules).orderBy(timekeepingSchedules.startTime);
+}
+export async function createTimekeepingSchedule(input: { name: string; startTime: string; endTime: string; graceMinutes: number; daysOfWeek: number[]; createdById: number }) {
+  const db = await getDb(); if (!db) throw new Error("Database is unavailable");
+  const [result] = await db.insert(timekeepingSchedules).values({ ...input, daysOfWeek: input.daysOfWeek }); return Number(result.insertId);
+}
+export async function listTimekeepingRequests(userId?: number) {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(timekeepingScheduleRequests).where(userId ? eq(timekeepingScheduleRequests.userId, userId) : undefined).orderBy(desc(timekeepingScheduleRequests.createdAt));
+}
+export async function createTimekeepingRequest(input: { userId: number; requestedDate: Date; scheduleId?: number; requestType: "schedule_change" | "time_correction" | "overtime"; reason: string }) {
+  const db = await getDb(); if (!db) throw new Error("Database is unavailable");
+  const [result] = await db.insert(timekeepingScheduleRequests).values({ ...input, scheduleId: input.scheduleId || null }); return Number(result.insertId);
+}
+export async function updateTimekeepingRequest(input: { id: number; status: "approved" | "rejected" | "cancelled"; reviewedById: number }) {
+  const db = await getDb(); if (!db) throw new Error("Database is unavailable");
+  await db.update(timekeepingScheduleRequests).set({ status: input.status, reviewedById: input.reviewedById, reviewedAt: new Date() }).where(eq(timekeepingScheduleRequests.id, input.id));
 }

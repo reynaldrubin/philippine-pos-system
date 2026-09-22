@@ -50,6 +50,11 @@ import {
   updateEmployeeLeaveStatus,
   listPhilippineHolidays,
   createPhilippineHoliday,
+  listTimekeepingSchedules,
+  createTimekeepingSchedule,
+  listTimekeepingRequests,
+  createTimekeepingRequest,
+  updateTimekeepingRequest,
   listReportTemplates,
   createReportTemplate,
   updateReportTemplate,
@@ -353,6 +358,24 @@ export const appRouter = router({
     holidays: router({
       list: staffProcedure.input(z.object({ year: z.number().int().min(2000).max(2100) })).query(({ input }) => listPhilippineHolidays(input.year)),
       create: managerProcedure.input(z.object({ holidayDate: z.coerce.date(), name: z.string().trim().min(2).max(160), holidayType: z.enum(["regular", "special_non_working", "special_working"]), year: z.number().int().min(2000).max(2100), notes: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => { const holidayId = await createPhilippineHoliday({ ...input, createdById: ctx.staff.userId }); await appendAuditLog({ userId: ctx.staff.userId, action: "hris.holiday.created", entityType: "philippine_holiday", entityId: holidayId }); return { holidayId }; }),
+    }),
+  }),
+  timekeeping: router({
+    clock: router({
+      status: staffProcedure.input(z.object({ locationId: z.number().int().positive() })).query(async ({ ctx, input }) => { await requireLocationAccess(ctx, input.locationId); return listStaffAttendance(input.locationId).then(rows => rows.filter(row => row.userId === ctx.staff.userId).slice(0, 10)); }),
+      record: staffProcedure.input(z.object({ locationId: z.number().int().positive(), eventType: z.enum(["time_in", "time_out"]), note: z.string().trim().max(240).optional() })).mutation(async ({ ctx, input }) => { await requireLocationAccess(ctx, input.locationId); const attendanceId = await recordStaffAttendance({ ...input, userId: ctx.staff.userId, recordedById: ctx.staff.userId }); await appendAuditLog({ userId: ctx.staff.userId, locationId: input.locationId, action: `timekeeping.${input.eventType}`, entityType: "staff_attendance", entityId: attendanceId }); return { attendanceId }; }),
+    }),
+    dtr: staffProcedure.input(z.object({ locationId: z.number().int().positive() })).query(async ({ ctx, input }) => { await requireLocationAccess(ctx, input.locationId); const rows = await listStaffAttendance(input.locationId); return ctx.staff.role === "cashier" ? rows.filter(row => row.userId === ctx.staff.userId) : rows; }),
+    process: managerProcedure.input(z.object({ locationId: z.number().int().positive() })).query(async ({ ctx, input }) => { await requireLocationAccess(ctx, input.locationId); const rows = await listStaffAttendance(input.locationId); const grouped = new Map<number, { userId: number; staffName: string | null; timeIn?: Date; timeOut?: Date; status: string }>(); rows.forEach(row => { const current = grouped.get(row.userId) ?? { userId: row.userId, staffName: row.staffName, status: "Incomplete" }; if (row.eventType === "time_in" && !current.timeIn) current.timeIn = row.createdAt; if (row.eventType === "time_out" && !current.timeOut) current.timeOut = row.createdAt; current.status = current.timeIn && current.timeOut ? "Ready for payroll" : "Incomplete"; grouped.set(row.userId, current); }); return Array.from(grouped.values()); }),
+    schedules: router({
+      list: staffProcedure.query(() => listTimekeepingSchedules()),
+      create: managerProcedure.input(z.object({ name: z.string().trim().min(2).max(120), startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), graceMinutes: z.number().int().min(0).max(240), daysOfWeek: z.array(z.number().int().min(0).max(6)).min(1) })).mutation(async ({ ctx, input }) => { const scheduleId = await createTimekeepingSchedule({ ...input, createdById: ctx.staff.userId }); await appendAuditLog({ userId: ctx.staff.userId, action: "timekeeping.schedule.created", entityType: "timekeeping_schedule", entityId: scheduleId }); return { scheduleId }; }),
+    }),
+    requests: router({
+      mine: staffProcedure.query(({ ctx }) => listTimekeepingRequests(ctx.staff.userId)),
+      all: managerProcedure.query(() => listTimekeepingRequests()),
+      create: staffProcedure.input(z.object({ requestedDate: z.coerce.date(), scheduleId: z.number().int().positive().optional(), requestType: z.enum(["schedule_change", "time_correction", "overtime"]), reason: z.string().trim().min(3).max(1000) })).mutation(async ({ ctx, input }) => { const requestId = await createTimekeepingRequest({ ...input, userId: ctx.staff.userId }); await appendAuditLog({ userId: ctx.staff.userId, action: "timekeeping.request.created", entityType: "timekeeping_request", entityId: requestId }); return { requestId }; }),
+      update: managerProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["approved", "rejected", "cancelled"]) })).mutation(async ({ ctx, input }) => { await updateTimekeepingRequest({ ...input, reviewedById: ctx.staff.userId }); await appendAuditLog({ userId: ctx.staff.userId, action: `timekeeping.request.${input.status}`, entityType: "timekeeping_request", entityId: input.id }); return { success: true }; }),
     }),
   }),
   auth: router({

@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 export type StaffRole = "cashier" | "manager" | "admin";
-export type StaffMenuKey = "overview" | "register" | "inventory" | "transfers" | "members" | "operations" | "reports" | "users" | "compliance" | "hris";
+export type StaffMenuKey = "overview" | "register" | "inventory" | "transfers" | "members" | "operations" | "reports" | "users" | "compliance" | "hris" | "timekeeping";
 export type StaffUser = { id: number; name: string | null; email: string | null; role: StaffRole; jobTitle?: string | null };
 export type StaffLocation = { id: number; code: string; name: string; type: "store" | "branch" | "warehouse" | "kiosk"; isPrimary: boolean };
 export type CartItem = { productId: number; sku: string; name: string; unitPrice: string; quantity: string; taxRate: string; isTaxInclusive: boolean };

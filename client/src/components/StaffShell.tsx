@@ -2,7 +2,7 @@ import { formatRole } from "@/lib/currency";
 import { StaffMenuKey, StaffRole, usePosStore } from "@/stores/posStore";
 import { trpc } from "@/lib/trpc";
 import {
-  ArrowLeftRight, Award, BadgePercent, BarChart3, CalendarDays, ChevronDown, ChevronRight, ClipboardCheck, FileText, IdCard, LayoutDashboard, LogOut, Menu, Package, ReceiptText, Settings2, ShoppingCart, Store, Undo2, UserRound, UsersRound, UserCog, WalletCards,
+  ArrowLeftRight, Award, BadgePercent, BarChart3, CalendarDays, CalendarClock, ChevronDown, ChevronRight, ClipboardCheck, FileText, IdCard, LayoutDashboard, LogOut, Menu, Package, ReceiptText, Settings2, ShoppingCart, Store, Undo2, UserRound, UsersRound, UserCog, WalletCards,
 } from "lucide-react";
 import React, { ReactNode, useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
@@ -47,6 +47,13 @@ const navigation = [
     { path: "/hris?section=profile", key: "hris", label: "Profile & Preferences", icon: UserRound, roles: ["manager", "admin"] },
     { path: "/hris?section=certificates", key: "hris", label: "Employee Certificates", icon: Award, roles: ["manager", "admin"] },
     { path: "/hris?section=holidays", key: "hris", label: "Philippine Holidays", icon: CalendarDays, roles: ["manager", "admin"] },
+  ]},
+  { group: "Timekeeping", items: [
+    { path: "/timekeeping?section=clock", key: "timekeeping", label: "Clock In / Clock Out", icon: CalendarClock, roles: ["cashier", "manager", "admin"] },
+    { path: "/timekeeping?section=dtr", key: "timekeeping", label: "Daily Time Record", icon: ClipboardCheck, roles: ["cashier", "manager", "admin"] },
+    { path: "/timekeeping?section=process", key: "timekeeping", label: "DTR Process", icon: FileText, roles: ["manager", "admin"] },
+    { path: "/timekeeping?section=scheduler", key: "timekeeping", label: "Calendar Scheduler", icon: CalendarDays, roles: ["manager", "admin"] },
+    { path: "/timekeeping?section=requests", key: "timekeeping", label: "Schedule Request logs", icon: FileText, roles: ["cashier", "manager", "admin"] },
   ]},
 ];
 

@@ -14,7 +14,7 @@ import {
 
 export const staffRoles = ["cashier", "manager", "admin"] as const;
 const persistedUserRoles = ["user", ...staffRoles] as const;
-export const staffMenuKeys = ["overview", "register", "inventory", "transfers", "members", "operations", "reports", "users", "compliance", "hris"] as const;
+export const staffMenuKeys = ["overview", "register", "inventory", "transfers", "members", "operations", "reports", "users", "compliance", "hris", "timekeeping"] as const;
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -282,6 +282,14 @@ export const staffAttendance = mysqlTable(
   },
   table => [index("staff_attendance_location_created_idx").on(table.locationId, table.createdAt), index("staff_attendance_user_created_idx").on(table.userId, table.createdAt)],
 );
+
+export const timekeepingSchedules = mysqlTable("timekeepingSchedules", {
+  id: int("id").autoincrement().primaryKey(), name: varchar("name", { length: 120 }).notNull(), startTime: varchar("startTime", { length: 5 }).notNull(), endTime: varchar("endTime", { length: 5 }).notNull(), graceMinutes: int("graceMinutes").default(15).notNull(), daysOfWeek: json("daysOfWeek").notNull(), isActive: boolean("isActive").default(true).notNull(), createdById: int("createdById").notNull().references(() => users.id, { onDelete: "restrict" }), createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [index("timekeeping_schedules_active_idx").on(table.isActive)]);
+
+export const timekeepingScheduleRequests = mysqlTable("timekeepingScheduleRequests", {
+  id: int("id").autoincrement().primaryKey(), userId: int("userId").notNull().references(() => users.id, { onDelete: "restrict" }), requestedDate: timestamp("requestedDate").notNull(), scheduleId: int("scheduleId").references(() => timekeepingSchedules.id, { onDelete: "set null" }), requestType: mysqlEnum("requestType", ["schedule_change", "time_correction", "overtime"]).notNull(), reason: text("reason").notNull(), status: mysqlEnum("status", ["pending", "approved", "rejected", "cancelled"]).default("pending").notNull(), reviewedById: int("reviewedById").references(() => users.id, { onDelete: "set null" }), reviewedAt: timestamp("reviewedAt"), createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [index("timekeeping_requests_user_date_idx").on(table.userId, table.requestedDate), index("timekeeping_requests_status_idx").on(table.status)]);
 
 export const categories = mysqlTable("categories", {
   id: int("id").autoincrement().primaryKey(),

@@ -1,4 +1,4 @@
-export const RETAIL_MENU_KEYS = ["overview", "register", "inventory", "transfers", "members", "operations", "reports", "users", "compliance", "hris"] as const;
+export const RETAIL_MENU_KEYS = ["overview", "register", "inventory", "transfers", "members", "operations", "reports", "users", "compliance", "hris", "timekeeping"] as const;
 export type RetailMenuKey = (typeof RETAIL_MENU_KEYS)[number];
 export type RetailStaffRole = "cashier" | "manager" | "admin";
 
@@ -14,8 +14,8 @@ export const PHILIPPINE_RETAIL_JOB_TITLES = [
 ] as const;
 
 export const DEFAULT_MENU_ACCESS: Record<RetailStaffRole, RetailMenuKey[]> = {
-  cashier: ["overview", "register", "members"],
-  manager: ["overview", "register", "inventory", "transfers", "members", "operations", "reports", "hris"],
+  cashier: ["overview", "register", "members", "timekeeping"],
+  manager: ["overview", "register", "inventory", "transfers", "members", "operations", "reports", "hris", "timekeeping"],
   admin: [...RETAIL_MENU_KEYS],
 };
 
