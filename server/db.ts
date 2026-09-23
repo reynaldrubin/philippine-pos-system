@@ -28,6 +28,8 @@ import {
   purchaseOrders,
   purchaseRequestItems,
   purchaseRequests,
+  payrollItems,
+  payrollRuns,
   reportTemplates,
   receiptDevices,
   registers,
@@ -1291,4 +1293,58 @@ export async function createTimekeepingRequest(input: { userId: number; requeste
 export async function updateTimekeepingRequest(input: { id: number; status: "approved" | "rejected" | "cancelled"; reviewedById: number }) {
   const db = await getDb(); if (!db) throw new Error("Database is unavailable");
   await db.update(timekeepingScheduleRequests).set({ status: input.status, reviewedById: input.reviewedById, reviewedAt: new Date() }).where(eq(timekeepingScheduleRequests.id, input.id));
+}
+
+
+export async function listStaffAttendanceRange(locationId: number, start: Date, end: Date) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ id: staffAttendance.id, userId: staffAttendance.userId, locationId: staffAttendance.locationId, eventType: staffAttendance.eventType, note: staffAttendance.note, recordedById: staffAttendance.recordedById, createdAt: staffAttendance.createdAt, staffName: users.name, staffRole: users.role }).from(staffAttendance).innerJoin(users, eq(staffAttendance.userId, users.id)).where(and(eq(staffAttendance.locationId, locationId), gte(staffAttendance.createdAt, start), lte(staffAttendance.createdAt, end))).orderBy(staffAttendance.createdAt);
+}
+
+export async function listPayrollRuns() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(payrollRuns).orderBy(desc(payrollRuns.createdAt)).limit(50);
+}
+
+export async function getPayrollRun(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const [run] = await db.select().from(payrollRuns).where(eq(payrollRuns.id, id)).limit(1);
+  if (!run) return null;
+  const items = await db.select({ id: payrollItems.id, payrollRunId: payrollItems.payrollRunId, employeeId: payrollItems.employeeId, userId: payrollItems.userId, daysWorked: payrollItems.daysWorked, hoursWorked: payrollItems.hoursWorked, lateMinutes: payrollItems.lateMinutes, undertimeMinutes: payrollItems.undertimeMinutes, overtimeMinutes: payrollItems.overtimeMinutes, basePay: payrollItems.basePay, overtimePay: payrollItems.overtimePay, allowances: payrollItems.allowances, deductions: payrollItems.deductions, netPay: payrollItems.netPay, notes: payrollItems.notes, createdAt: payrollItems.createdAt, employeeName: users.name, employeeNumber: employeeProfiles.employeeNumber }).from(payrollItems).innerJoin(users, eq(payrollItems.userId, users.id)).leftJoin(employeeProfiles, eq(payrollItems.employeeId, employeeProfiles.id)).where(eq(payrollItems.payrollRunId, id)).orderBy(users.name);
+  return { run, items };
+}
+
+function minutesBetween(start: Date, end: Date) { return Math.max(0, Math.round((end.getTime() - start.getTime()) / 60000)); }
+
+export async function computePayroll(input: { periodStart: Date; periodEnd: Date; computedById: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  const attendance = await db.select({ userId: staffAttendance.userId, eventType: staffAttendance.eventType, createdAt: staffAttendance.createdAt }).from(staffAttendance).where(and(gte(staffAttendance.createdAt, input.periodStart), lte(staffAttendance.createdAt, input.periodEnd))).orderBy(staffAttendance.createdAt);
+  const byUser = new Map<number, { timeIn?: Date; timeOut?: Date; days: Set<string>; late: number; undertime: number; overtime: number; hours: number }>();
+  for (const row of attendance) {
+    const key = row.userId; const day = row.createdAt.toISOString().slice(0, 10); const current = byUser.get(key) ?? { days: new Set<string>(), late: 0, undertime: 0, overtime: 0, hours: 0 };
+    if (row.eventType === "time_in") { current.timeIn = row.createdAt; current.days.add(day); }
+    if (row.eventType === "time_out" && current.timeIn) { current.timeOut = row.createdAt; const minutes = minutesBetween(current.timeIn, row.createdAt); current.hours += minutes / 60; const late = Math.max(0, (current.timeIn.getHours() * 60 + current.timeIn.getMinutes()) - 9 * 60); current.late += late; current.overtime += Math.max(0, minutes - 8 * 60); current.undertime += Math.max(0, 8 * 60 - minutes); current.timeIn = undefined; current.timeOut = undefined; }
+    byUser.set(key, current);
+  }
+  const items: Array<typeof payrollItems.$inferInsert> = [];
+  for (const [userId, stats] of Array.from(byUser.entries())) {
+    const [profile] = await db.select().from(employeeProfiles).where(eq(employeeProfiles.userId, userId)).limit(1);
+    const compensation = profile ? (await db.select().from(employeeCompensation).where(eq(employeeCompensation.employeeId, profile.id)).orderBy(desc(employeeCompensation.effectiveDate)).limit(1))[0] : null;
+    const baseSalary = Number(compensation?.baseSalary ?? 0); const salaryType = compensation?.salaryType ?? "daily"; const dailyRate = salaryType === "monthly" ? baseSalary / 26 : salaryType === "hourly" ? baseSalary * 8 : baseSalary; const basePay = stats.days.size * dailyRate; const overtimePay = (dailyRate / 8) * 1.25 * (stats.overtime / 60); const allowances = compensation?.allowances && typeof compensation.allowances === "object" ? Object.values(compensation.allowances as Record<string, number>).reduce((sum, value) => sum + Number(value || 0), 0) : 0; const undertimeDeduction = (dailyRate / 8) * (stats.undertime / 60); const netPay = Math.max(0, basePay + overtimePay + allowances - undertimeDeduction);
+    items.push({ payrollRunId: 0, employeeId: profile?.id ?? null, userId, daysWorked: stats.days.size.toFixed(2), hoursWorked: stats.hours.toFixed(2), lateMinutes: stats.late, undertimeMinutes: stats.undertime, overtimeMinutes: stats.overtime, basePay: basePay.toFixed(2), overtimePay: overtimePay.toFixed(2), allowances: allowances.toFixed(2), deductions: undertimeDeduction.toFixed(2), netPay: netPay.toFixed(2), notes: compensation ? null : "No active compensation record; computed at zero base pay" });
+  }
+  const totalGross = items.reduce((sum, item) => sum + Number(item.basePay) + Number(item.overtimePay) + Number(item.allowances), 0); const totalDeductions = items.reduce((sum, item) => sum + Number(item.deductions), 0); const totalNet = items.reduce((sum, item) => sum + Number(item.netPay), 0);
+  const [runResult] = await db.insert(payrollRuns).values({ ...input, status: "computed", totalGross: totalGross.toFixed(2), totalDeductions: totalDeductions.toFixed(2), totalNet: totalNet.toFixed(2) }); const runId = Number(runResult.insertId);
+  if (items.length) await db.insert(payrollItems).values(items.map(item => ({ ...item, payrollRunId: runId })));
+  return { runId, itemCount: items.length, totalGross: totalGross.toFixed(2), totalDeductions: totalDeductions.toFixed(2), totalNet: totalNet.toFixed(2) };
+}
+
+export async function updatePayrollRunStatus(id: number, status: "approved" | "paid", userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  await db.update(payrollRuns).set({ status, approvedById: status === "approved" ? userId : undefined, approvedAt: status === "approved" ? new Date() : undefined }).where(eq(payrollRuns.id, id));
 }
